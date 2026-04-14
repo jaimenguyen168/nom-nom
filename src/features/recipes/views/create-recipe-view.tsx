@@ -24,6 +24,7 @@ import Image from "next/image";
 import { useImageUpload } from "@/hooks/use-image-upload";
 import { useCreateRecipe } from "@/hooks/trpcHooks/use-recipes";
 import { createRecipeSchema } from "@/db/schemas/recipes";
+import { Switch } from "@/components/ui/switch";
 
 const CreateRecipeView = () => {
   const router = useRouter();
@@ -81,7 +82,9 @@ const CreateRecipeView = () => {
         {
           onSuccess: (createdRecipe) => {
             toast.success("Recipe created successfully");
-            router.push(`/recipes/${createdRecipe.id}`);
+            router.push(
+              `/${createdRecipe.username}/${createdRecipe.recipeSlug}`,
+            );
           },
           onError: (error) => {
             toast.error(error.message);
@@ -614,6 +617,32 @@ const CreateRecipeView = () => {
               </div>
             )}
           </FormItem>
+
+          {/* Visibility */}
+          <FormField
+            control={form.control}
+            name="isPublic"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <FormLabel className="text-base">
+                    {field.value ? "Public" : "Private"}
+                  </FormLabel>
+                  <FormDescription>
+                    {field.value
+                      ? "Anyone can see this recipe"
+                      : "Only you can see this recipe"}
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
         </form>
       </Form>
 
@@ -651,4 +680,5 @@ const recipeDefaultValues: z.infer<typeof createRecipeSchema> = {
   servings: "",
   cookingTime: { hours: "", minutes: "" },
   prepTime: { hours: "", minutes: "" },
+  isPublic: false,
 };

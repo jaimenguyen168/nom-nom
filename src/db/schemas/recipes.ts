@@ -20,12 +20,13 @@ export const recipes = pgTable(
       .primaryKey()
       .$defaultFn(() => nanoid()),
     title: varchar("title", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }).notNull(),
     description: text("description"),
     imageUrl: text("image_url"),
     prepTimeMinutes: integer("prep_time_minutes"),
     cookTimeMinutes: integer("cook_time_minutes"),
     servings: integer("servings").default(1),
-    isPublic: boolean("is_public").default(true),
+    isPublic: boolean("is_public").default(false),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     userId: text("user_id")
@@ -33,6 +34,7 @@ export const recipes = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
   },
   (t) => [
+    unique("recipes_user_slug_unique").on(t.userId, t.slug),
     index("recipes_user_idx").on(t.userId),
     index("recipes_public_idx").on(t.isPublic),
   ],
@@ -243,4 +245,5 @@ export const createRecipeSchema = z.object({
     }),
   ),
   tags: z.array(z.string()).optional(),
+  isPublic: z.boolean(),
 });
