@@ -1,5 +1,6 @@
 import React from "react";
+import CreateRecipeView from "@/features/recipes/views/create-recipe-view";
 
 export default function CreateRecipePage() {
-  return <div>CreateRecipePage</div>;
+  return <CreateRecipeView />;
 }
