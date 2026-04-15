@@ -57,3 +57,21 @@ export const useSavesCount = (recipeId: string) => {
   const trpc = useTRPC();
   return useQuery(trpc.recipes.savesCount.queryOptions({ recipeId }));
 };
+
+export const useRecipeRecommendations = (recipeId: string) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.recipes.getRecommendations.queryOptions({ recipeId }),
+  );
+};
+
+export const useGetRecipes = (
+  sortBy: "trending" | "popular" | "new" | "a_z" | "relevance" = "new",
+  limit = 12,
+  page = 1,
+) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.recipes.getMany.queryOptions({ sortBy, pageSize: limit, page }),
+  );
+};

@@ -1,0 +1,105 @@
+"use client";
+
+import React from "react";
+import Image from "next/image";
+import { Flame, Heart } from "lucide-react";
+import { cn } from "@/lib/utils";
+import StarRatings from "@/components/star-ratings";
+import { Card } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
+import {
+  useIsSavedRecipe,
+  useToggleSaveRecipe,
+} from "@/hooks/trpcHooks/use-recipes";
+
+interface RecipeCardProps {
+  recipe: {
+    id: string;
+    title: string;
+    slug: string;
+    imageUrl: string | null;
+    userId: string;
+    rating: number;
+    calories: number;
+  };
+  username?: string;
+}
+
+const RecipeCard = ({ recipe, username }: RecipeCardProps) => {
+  const router = useRouter();
+  const { userId } = useAuth();
+  const { data: saveData } = useIsSavedRecipe(recipe.id);
+  const isSaved = saveData?.isSaved ?? false;
+
+  const { handleToggleSave, isPending } = useToggleSaveRecipe(
+    recipe.id,
+    username ?? "",
+    recipe.slug,
+  );
+
+  const handleNavigation = () => {
+    router.push(`/${username}/${recipe.slug}`);
+  };
+
+  const handleGoToAuthor = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const path = userId === recipe.userId ? "/profile" : `/${username}`;
+    router.push(path);
+  };
+
+  return (
+    <Card
+      onClick={handleNavigation}
+      className="rounded-xl py-0 shadow-md border overflow-hidden bg-white cursor-pointer"
+    >
+      <div className="relative w-full h-48">
+        <Image
+          src={recipe.imageUrl || "/no-image.svg"}
+          alt={recipe.title}
+          width={500}
+          height={500}
+          className="w-full h-full object-cover"
+        />
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleToggleSave();
+          }}
+          disabled={isPending}
+          className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-lg cursor-pointer z-10 hover:scale-105"
+        >
+          <Heart
+            className={cn(
+              "size-4",
+              isSaved
+                ? "fill-primary-200 text-primary-200"
+                : "text-primary-200",
+            )}
+          />
+        </button>
+      </div>
+
+      <div className="px-4 pb-4 space-y-2">
+        <StarRatings rating={recipe.rating} />
+        <h3 className="font-semibold text-sm md:text-base capitalize overflow-hidden line-clamp-2 leading-snug min-h-13">
+          {recipe.title}
+        </h3>
+        <div className="hidden sm:flex justify-between text-sm font-medium text-gray-600 items-center">
+          <div
+            onClick={handleGoToAuthor}
+            className="flex items-center gap-2 cursor-pointer hover:scale-105"
+          >
+            <span>{username}</span>
+          </div>
+          <div className="flex items-center gap-1 p-2 rounded-lg border">
+            <Flame size={14} className="text-primary-200" />
+            {recipe.calories} cals
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+export default RecipeCard;

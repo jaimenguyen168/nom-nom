@@ -20,6 +20,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import NutritionFactsSection from "@/features/recipes/components/nutrition-facts-section";
+import RecipeRecommendationGrid from "@/features/recipes/components/recipe-recommendation-grid";
+import RecipeCategoryList from "@/features/recipes/components/recipe-category-list";
 
 interface Props {
   username: string;
@@ -116,6 +118,8 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
               console.log("Review:", rating, text)
             }
           />
+
+          <RecipeRecommendationGrid recipeId={recipe.id} />
         </div>
 
         {/* Right Sidebar */}
@@ -125,10 +129,17 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
             className="w-full rounded-lg p-6"
           />
 
-          <ContactSection />
-        </div>
+          <RecipeCategoryList categoryTitle="Recent Recipes" category="new" />
 
-        <TagsSection tags={tags} />
+          <ContactSection />
+
+          <RecipeCategoryList
+            categoryTitle="Trending Recipes"
+            category="trending"
+          />
+
+          <TagsSection tags={tags} />
+        </div>
       </div>
     </div>
   );
