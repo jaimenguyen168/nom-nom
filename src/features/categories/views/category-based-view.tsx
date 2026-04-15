@@ -17,21 +17,27 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { useGetRecipes } from "@/hooks/trpcHooks/use-recipes";
-import { useAuth } from "@clerk/nextjs";
-import Link from "next/link";
-import { PlusCircle } from "lucide-react";
+import { useGetRecipesByCategory } from "@/hooks/trpcHooks/use-recipes";
 import RecipeCard from "@/features/recipes/components/recipe-card";
 
 type RecipeFeedType = "trending" | "popular" | "new" | "a_z" | "relevance";
 
-const RecipesView = () => {
-  const { userId } = useAuth();
+interface Props {
+  categorySlug: string;
+  categoryName: string;
+}
+
+const CategoryBasedView = ({ categorySlug, categoryName }: Props) => {
   const [sortBy, setSortBy] = useState<RecipeFeedType>("new");
   const [page, setPage] = useState(1);
   const pageSize = 12;
 
-  const { data } = useGetRecipes(sortBy, pageSize, page);
+  const { data } = useGetRecipesByCategory(
+    categorySlug,
+    sortBy,
+    pageSize,
+    page,
+  );
 
   const recipes = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -44,7 +50,6 @@ const RecipesView = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      {/* Breadcrumb */}
       <Breadcrumb className="mb-6">
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -52,22 +57,17 @@ const RecipesView = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Recipes</BreadcrumbPage>
+            <BreadcrumbLink href="/categories">Categories</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{categoryName}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold">Recipes</h1>
-          {userId && (
-            <Link href="/recipes/new">
-              <PlusCircle className="size-7 text-primary-200 cursor-pointer hover:text-primary-200/80" />
-            </Link>
-          )}
-        </div>
-
+        <h1 className="text-3xl font-bold">{categoryName}</h1>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Sort by:</span>
           <Select value={sortBy} onValueChange={handleSortChange}>
@@ -85,7 +85,6 @@ const RecipesView = () => {
         </div>
       </div>
 
-      {/* Grid */}
       {recipes.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
           {recipes.map((recipe) => (
@@ -95,15 +94,14 @@ const RecipesView = () => {
       ) : (
         <div className="text-center py-16">
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            No recipes found
+            No recipes found in this category
           </h3>
           <p className="text-gray-500">
-            Try adjusting your sort or check back later.
+            Check back later or explore other categories.
           </p>
         </div>
       )}
 
-      {/* Pagination */}
       <div className="flex justify-center gap-4">
         {page > 1 && (
           <Button variant="outline" onClick={() => setPage((p) => p - 1)}>
@@ -124,4 +122,4 @@ const RecipesView = () => {
   );
 };
 
-export default RecipesView;
+export default CategoryBasedView;

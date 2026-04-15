@@ -75,3 +75,27 @@ export const useGetRecipes = (
     trpc.recipes.getMany.queryOptions({ sortBy, pageSize: limit, page }),
   );
 };
+
+export const useGetRecipesBySameCategories = (recipeId: string) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.recipes.getBySameCategories.queryOptions({ recipeId }),
+  );
+};
+
+export const useGetRecipesByCategory = (
+  categorySlug: string,
+  sortBy: "trending" | "popular" | "new" | "a_z" | "relevance" = "new",
+  pageSize = 12,
+  page = 1,
+) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.recipes.getManyByCategory.queryOptions({
+      categorySlug,
+      sortBy,
+      pageSize,
+      page,
+    }),
+  );
+};

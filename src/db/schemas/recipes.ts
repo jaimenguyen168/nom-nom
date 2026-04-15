@@ -246,4 +246,5 @@ export const createRecipeSchema = z.object({
   ),
   tags: z.array(z.string()).optional(),
   isPublic: z.boolean(),
+  categoryIds: z.array(z.string()).max(3, "Maximum 3 categories").optional(),
 });

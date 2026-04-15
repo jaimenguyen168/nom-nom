@@ -5,5 +5,5 @@ export default function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div>{children}</div>;
+  return <div className="flex-1 overflow-x-hidden pt-8">{children}</div>;
 }

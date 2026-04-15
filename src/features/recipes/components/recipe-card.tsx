@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { Flame, Heart } from "lucide-react";
+import { Flame, Heart, UserCircleIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import StarRatings from "@/components/star-ratings";
 import { Card } from "@/components/ui/card";
@@ -20,17 +20,21 @@ interface RecipeCardProps {
     slug: string;
     imageUrl: string | null;
     userId: string;
+    username: string | null;
+    profileImageUrl: string | null;
     rating: number;
     calories: number;
   };
-  username?: string;
 }
 
-const RecipeCard = ({ recipe, username }: RecipeCardProps) => {
+const RecipeCard = ({ recipe }: RecipeCardProps) => {
   const router = useRouter();
   const { userId } = useAuth();
   const { data: saveData } = useIsSavedRecipe(recipe.id);
   const isSaved = saveData?.isSaved ?? false;
+
+  const username = recipe.username ?? "";
+  const userProfileImageUrl = recipe.profileImageUrl ?? undefined;
 
   const { handleToggleSave, isPending } = useToggleSaveRecipe(
     recipe.id,
@@ -85,11 +89,22 @@ const RecipeCard = ({ recipe, username }: RecipeCardProps) => {
         <h3 className="font-semibold text-sm md:text-base capitalize overflow-hidden line-clamp-2 leading-snug min-h-13">
           {recipe.title}
         </h3>
-        <div className="hidden sm:flex justify-between text-sm font-medium text-gray-600 items-center">
+        <div className="flex justify-between text-sm font-medium text-gray-600 items-center">
           <div
             onClick={handleGoToAuthor}
             className="flex items-center gap-2 cursor-pointer hover:scale-105"
           >
+            {userProfileImageUrl ? (
+              <Image
+                src={userProfileImageUrl}
+                alt={username}
+                width={100}
+                height={100}
+                className="w-6 h-6 rounded-full object-cover"
+              />
+            ) : (
+              <UserCircleIcon className="size-4 text-primary-200" />
+            )}
             <span>{username}</span>
           </div>
           <div className="flex items-center gap-1 p-2 rounded-lg border">

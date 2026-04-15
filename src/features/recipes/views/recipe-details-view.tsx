@@ -22,6 +22,7 @@ import {
 import NutritionFactsSection from "@/features/recipes/components/nutrition-facts-section";
 import RecipeRecommendationGrid from "@/features/recipes/components/recipe-recommendation-grid";
 import RecipeCategoryList from "@/features/recipes/components/recipe-category-list";
+import RecipeCategoryGrid from "@/features/recipes/components/recipe-category-grid";
 
 interface Props {
   username: string;
@@ -39,7 +40,7 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
   const tags = data.tags;
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
+    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16 pt-8">
       {/* Breadcrumb */}
       <Breadcrumb className="mb-8">
         <BreadcrumbList>
@@ -132,6 +133,8 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
           <RecipeCategoryList categoryTitle="Recent Recipes" category="new" />
 
           <ContactSection />
+
+          <RecipeCategoryGrid recipeId={recipe.id} />
 
           <RecipeCategoryList
             categoryTitle="Trending Recipes"

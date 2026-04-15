@@ -26,6 +26,8 @@ import { useCreateRecipe } from "@/hooks/trpcHooks/use-recipes";
 import { createRecipeSchema } from "@/db/schemas/recipes";
 import { Switch } from "@/components/ui/switch";
 import AppTitle from "@/components/app-title";
+import { useGetCategories } from "@/hooks/trpcHooks/use-categories";
+import { cn } from "@/lib/utils";
 
 const CreateRecipeView = () => {
   const router = useRouter();
@@ -61,6 +63,8 @@ const CreateRecipeView = () => {
       control: form.control,
       name: "instructions",
     });
+
+  const { data: categories } = useGetCategories();
 
   const {
     fields: nutritionFields,
@@ -619,6 +623,63 @@ const CreateRecipeView = () => {
             )}
           </FormItem>
 
+          {/* Categories */}
+          <FormField
+            control={form.control}
+            name="categoryIds"
+            render={({ field }) => {
+              const selected = field.value ?? [];
+
+              const toggleCategory = (id: string) => {
+                if (selected.includes(id)) {
+                  field.onChange(selected.filter((c) => c !== id));
+                } else if (selected.length < 3) {
+                  field.onChange([...selected, id]);
+                }
+              };
+
+              return (
+                <FormItem>
+                  <FormLabel>Categories</FormLabel>
+                  <FormDescription className="text-xs">
+                    Select up to 3 categories
+                  </FormDescription>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {isLoading ? (
+                      <span className="text-sm text-muted-foreground">
+                        Loading...
+                      </span>
+                    ) : (
+                      categories?.map((category) => {
+                        const isSelected = selected.includes(category.id);
+                        return (
+                          <button
+                            key={category.id}
+                            type="button"
+                            onClick={() => toggleCategory(category.id)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                              isSelected
+                                ? "bg-primary-200 text-white border-primary-200"
+                                : "bg-white text-gray-600 border-gray-300 hover:border-primary-200",
+                              !isSelected &&
+                                selected.length >= 3 &&
+                                "opacity-50 cursor-not-allowed",
+                            )}
+                            disabled={!isSelected && selected.length >= 3}
+                          >
+                            {category.name}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
+
           {/* Visibility */}
           <FormField
             control={form.control}
@@ -681,5 +742,6 @@ const recipeDefaultValues: z.infer<typeof createRecipeSchema> = {
   servings: "",
   cookingTime: { hours: "", minutes: "" },
   prepTime: { hours: "", minutes: "" },
-  isPublic: false,
+  isPublic: true,
+  categoryIds: [],
 };
