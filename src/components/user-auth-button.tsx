@@ -15,8 +15,8 @@ import {
   MonitorUpIcon,
   User2Icon,
   ClipboardPenLineIcon,
-  ArrowRightIcon,
   ChevronRightIcon,
+  Loader2Icon,
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 
@@ -25,7 +25,13 @@ const UserAuthButton = () => {
   const { user } = useUser();
   const { isLoaded, isSignedIn } = useAuth();
 
-  if (!isLoaded) return null;
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center size-10 shrink-0">
+        <Loader2Icon className="animate-spin" />
+      </div>
+    );
+  }
 
   if (!isSignedIn) {
     return (

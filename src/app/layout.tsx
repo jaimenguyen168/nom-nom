@@ -5,6 +5,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import NavbarHeader from "@/components/navbar-header";
 import { Toaster } from "@/components/ui/sonner";
+import { TRPCReactProvider } from "@/trpc/client";
 
 const roboto = Roboto({
   variable: "--font-sans",
@@ -23,17 +24,19 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html
-        lang="en"
-        className={cn("h-full", "antialiased", roboto.variable)}
-        suppressHydrationWarning
-      >
-        <body className="min-h-full flex flex-col">
-          <NavbarHeader />
-          {children}
-          <Toaster />
-        </body>
-      </html>
+      <TRPCReactProvider>
+        <html
+          lang="en"
+          className={cn("h-full", "antialiased", roboto.variable)}
+          suppressHydrationWarning
+        >
+          <body className="min-h-full flex flex-col">
+            <NavbarHeader />
+            <main className="flex-1">{children}</main>
+            <Toaster />
+          </body>
+        </html>
+      </TRPCReactProvider>
     </ClerkProvider>
   );
 }

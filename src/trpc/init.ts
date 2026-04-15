@@ -4,10 +4,11 @@ import { cache } from "react";
 import superjson from "superjson";
 
 export const createTRPCContext = cache(async () => {
-  return {};
+  const { userId } = await auth();
+  return { userId };
 });
 
-const t = initTRPC.create({
+const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
 });
 
