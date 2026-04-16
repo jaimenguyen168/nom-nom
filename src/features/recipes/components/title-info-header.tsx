@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import {
   BookmarkIcon,
@@ -12,8 +14,9 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import AppTitle from "@/components/app-title";
 import { useIsSavedRecipe, useSavesCount } from "@/hooks/trpcHooks/use-recipes";
+import { useIsSavedBlog, useBlogSavesCount } from "@/hooks/trpcHooks/use-blogs";
 
-interface TitleInfoHeaderProps {
+interface BaseProps {
   title: string;
   authorId: string;
   authorName: string;
@@ -23,46 +26,60 @@ interface TitleInfoHeaderProps {
   rating: number;
   ratingCount: number;
   className?: string;
+}
+
+interface RecipeProps extends BaseProps {
+  type: "recipe";
   recipeId: string;
 }
 
-const TitleInfoHeader = ({
-  title,
-  authorId,
-  authorName,
-  authorProfileImageUrl,
-  date,
-  commentsCount,
-  rating,
-  ratingCount,
-  recipeId,
-}: TitleInfoHeaderProps) => {
+interface BlogProps extends BaseProps {
+  type: "blog";
+  blogId: string;
+}
+
+type TitleInfoHeaderProps = RecipeProps | BlogProps;
+
+const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
   const { user } = useUser();
   const router = useRouter();
-  const { data: saveData } = useIsSavedRecipe(recipeId);
-  const { data: savesData } = useSavesCount(recipeId);
 
-  const isSaved = saveData?.isSaved ?? false;
-  const savesCount = savesData?.savesCount ?? 0;
+  const recipeId = props.type === "recipe" ? props.recipeId : "";
+  const blogId = props.type === "blog" ? props.blogId : "";
+
+  const { data: recipeSaveData } = useIsSavedRecipe(recipeId);
+  const { data: recipeSavesData } = useSavesCount(recipeId);
+  const { data: blogSaveData } = useIsSavedBlog(blogId);
+  const { data: blogSavesData } = useBlogSavesCount(blogId);
+
+  const isSaved =
+    props.type === "recipe"
+      ? (recipeSaveData?.isSaved ?? false)
+      : (blogSaveData?.isSaved ?? false);
+
+  const savesCount =
+    props.type === "recipe"
+      ? (recipeSavesData?.savesCount ?? 0)
+      : (blogSavesData?.savesCount ?? 0);
 
   const handleGoToAuthor = () => {
-    const targetUrl = user?.id === authorId ? "/profile" : `/users/${authorId}`;
+    const targetUrl =
+      user?.id === props.authorId ? "/profile" : `/${props.authorName}`;
     router.push(targetUrl);
   };
 
   return (
     <div>
-      <AppTitle title={title} className="mb-2" />
-
+      <AppTitle title={props.title} className="mb-2" />
       <div className="flex flex-wrap items-center text-sm font-semibold gap-4 mb-6">
         <div
           onClick={handleGoToAuthor}
           className="flex items-center gap-1.5 cursor-pointer hover:brightness-80"
         >
-          {authorProfileImageUrl ? (
+          {props.authorProfileImageUrl ? (
             <Image
-              src={authorProfileImageUrl}
-              alt={authorName}
+              src={props.authorProfileImageUrl}
+              alt={props.authorName}
               width={100}
               height={100}
               className="w-6 h-6 rounded-full object-cover"
@@ -70,16 +87,16 @@ const TitleInfoHeader = ({
           ) : (
             <UserCircleIcon className="size-4 text-primary-200" />
           )}
-          <span>{authorName}</span>
+          <span>{props.authorName}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <CalendarDays className="size-4 text-primary-200" />
-          <span>{formatDate(date)}</span>
+          <span>{formatDate(props.date)}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <MessageCircleMore className="size-4 text-primary-200" />
-          <span>{commentsCount}</span>
-          {commentsCount === 1 ? "Comment" : "Comments"}
+          <span>{props.commentsCount}</span>
+          {props.commentsCount === 1 ? "Comment" : "Comments"}
         </div>
         <div className="flex items-center gap-1">
           <BookmarkIcon
@@ -89,11 +106,11 @@ const TitleInfoHeader = ({
           <span>{savesCount}</span> {savesCount === 1 ? "Save" : "Saves"}
         </div>
         <div className="flex items-center gap-1">
-          <StarRatings rating={rating} />
+          <StarRatings rating={props.rating} />
           <span>
-            {Number(rating).toFixed(1)} / {ratingCount}
+            {Number(props.rating).toFixed(1)} / {props.ratingCount}
           </span>
-          {ratingCount === 1 ? "Review" : "Reviews"}
+          {props.ratingCount === 1 ? "Review" : "Reviews"}
         </div>
       </div>
     </div>

@@ -28,7 +28,7 @@ const RecipeCategoryList = ({
           <Link
             key={recipe.id}
             className="flex items-center gap-4 rounded-lg hover:bg-gray-50 transition-colors"
-            href={`/${recipe.username}/${recipe.slug}`}
+            href={`/recipes/${recipe.username}/${recipe.slug}`}
           >
             <div className="shrink-0">
               <Image

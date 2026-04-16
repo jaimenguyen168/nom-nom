@@ -6,10 +6,12 @@ import {
   timestamp,
   jsonb,
   pgEnum,
+  unique,
 } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 import { users } from "@/db/schemas/users";
 import { z } from "zod";
+import { categories } from "@/db/schemas/categories";
 
 export const blogStatusEnum = pgEnum("blog_status", [
   "draft",
@@ -162,6 +164,23 @@ export const relatedBlogs = pgTable("related_blogs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const blogCategories = pgTable(
+  "blog_categories",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    categoryId: text("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    blogId: text("blog_id")
+      .notNull()
+      .references(() => blogs.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => [unique("blog_category_unique").on(t.blogId, t.categoryId)],
+);
+
 export const contentBlockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("paragraph"), value: z.string() }),
   z.object({
@@ -182,7 +201,7 @@ export const contentBlockSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("list"),
     value: z.string(),
-    items: z.array(z.object({ text: z.string() })).optional(),
+    items: z.array(z.string()).optional(),
   }),
 ]);
 
@@ -195,4 +214,5 @@ export const createBlogSchema = z.object({
   contentBlocks: z.array(contentBlockSchema),
   status: z.enum(["draft", "published", "archived"]),
   tags: z.array(z.object({ name: z.string() })).optional(),
+  categoryIds: z.array(z.string()).max(3, "Maximum 3 categories").optional(),
 });

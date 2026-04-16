@@ -46,12 +46,21 @@ import {
 import { createBlogSchema, contentBlockSchema } from "@/db/schemas/blogs";
 import { useImageUpload } from "@/hooks/use-image-upload";
 import { useCreateBlog } from "@/hooks/trpcHooks/use-blogs";
-import { slugify } from "@/lib/utils";
+import { cn, slugify } from "@/lib/utils";
 import AppTitle from "@/components/app-title";
+import { useGetCategories } from "@/hooks/trpcHooks/use-categories";
 
 type CreateBlogForm = z.infer<typeof createBlogSchema>;
 type ContentBlock = z.infer<typeof contentBlockSchema>;
 type ContentBlockType = ContentBlock["type"];
+
+interface ContentImageState {
+  file: File | null;
+  previewUrl: string | null;
+  uploadedUrl: string | null;
+  isUploading: boolean;
+  error: string | null;
+}
 
 const blogDefaultValues: CreateBlogForm = {
   title: "",
@@ -69,7 +78,7 @@ const CreateBlogView = () => {
   const createBlog = useCreateBlog();
 
   const {
-    isUploading,
+    isUploading: isFeaturedImageUploading,
     previewUrl: featuredImagePreview,
     uploadFile: uploadFeaturedImage,
     removeFile: removeFeaturedImage,
@@ -80,6 +89,11 @@ const CreateBlogView = () => {
     uploadPreset: "blog_content_images",
     maxFileSize: 30 * 1024 * 1024,
   });
+
+  // Track content images separately by block index
+  const [contentImages, setContentImages] = useState<
+    Record<number, ContentImageState>
+  >({});
 
   const form = useForm<CreateBlogForm>({
     resolver: zodResolver(createBlogSchema),
@@ -95,6 +109,7 @@ const CreateBlogView = () => {
   }, [watchTitle, form]);
 
   const [tagInput, setTagInput] = useState("");
+  const { data: categories } = useGetCategories();
 
   const {
     fields: contentFields,
@@ -108,6 +123,51 @@ const CreateBlogView = () => {
     remove: removeTag,
   } = useFieldArray({ control: form.control, name: "tags" });
 
+  const handleContentImageChange =
+    (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const previewUrl = URL.createObjectURL(file);
+      setContentImages((prev) => ({
+        ...prev,
+        [index]: {
+          file,
+          previewUrl,
+          uploadedUrl: null,
+          isUploading: false,
+          error: null,
+        },
+      }));
+    };
+
+  const removeContentImage = (index: number) => {
+    setContentImages((prev) => {
+      const updated = { ...prev };
+      if (updated[index]?.previewUrl) {
+        URL.revokeObjectURL(updated[index].previewUrl!);
+      }
+      delete updated[index];
+      return updated;
+    });
+  };
+
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "blog_content_images");
+    formData.append("folder", "blogs/content");
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+      { method: "POST", body: formData },
+    );
+
+    if (!response.ok) throw new Error("Upload failed");
+    const data = await response.json();
+    return data.secure_url;
+  };
+
   const onSubmit = async (data: CreateBlogForm) => {
     try {
       let featuredImageUrl = "";
@@ -115,8 +175,49 @@ const CreateBlogView = () => {
         featuredImageUrl = (await uploadFeaturedImage()) || "";
       }
 
+      // Upload all content images
+      const uploadedContentImages: Record<number, string> = {};
+      for (const [indexStr, imageState] of Object.entries(contentImages)) {
+        const index = parseInt(indexStr);
+        if (imageState.file && !imageState.uploadedUrl) {
+          setContentImages((prev) => ({
+            ...prev,
+            [index]: { ...prev[index], isUploading: true },
+          }));
+          try {
+            const url = await uploadToCloudinary(imageState.file);
+            uploadedContentImages[index] = url;
+            setContentImages((prev) => ({
+              ...prev,
+              [index]: { ...prev[index], uploadedUrl: url, isUploading: false },
+            }));
+          } catch {
+            setContentImages((prev) => ({
+              ...prev,
+              [index]: {
+                ...prev[index],
+                error: "Upload failed",
+                isUploading: false,
+              },
+            }));
+          }
+        }
+      }
+
+      // Map content blocks with uploaded image URLs
+      const updatedContentBlocks = data.contentBlocks.map((block, index) => {
+        if (block.type === "image" && uploadedContentImages[index]) {
+          return { ...block, url: uploadedContentImages[index] };
+        }
+        return block;
+      });
+
       await createBlog.mutateAsync(
-        { ...data, featuredImage: featuredImageUrl || undefined },
+        {
+          ...data,
+          featuredImage: featuredImageUrl || undefined,
+          contentBlocks: updatedContentBlocks,
+        },
         {
           onSuccess: (createdBlog) => {
             toast.success("Blog created successfully");
@@ -148,7 +249,7 @@ const CreateBlogView = () => {
       type === "heading"
         ? { type, value: "", level: 2 }
         : type === "list"
-          ? { type, value: "", items: [{ text: "" }] }
+          ? { type, value: "", items: [""] }
           : type === "quote"
             ? { type, value: "", author: "" }
             : type === "image"
@@ -158,7 +259,10 @@ const CreateBlogView = () => {
     appendContent(newBlock);
   };
 
-  const isLoading = createBlog.isPending || isUploading;
+  const isLoading =
+    createBlog.isPending ||
+    isFeaturedImageUploading ||
+    Object.values(contentImages).some((img) => img.isUploading);
 
   return (
     <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
@@ -438,14 +542,72 @@ const CreateBlogView = () => {
                     </div>
                   )}
 
-                  {field.type === "list" && (
-                    <ListBlockComponent blockIndex={index} form={form} />
-                  )}
-
                   {field.type === "image" && (
                     <div className="space-y-4">
-                      <ImageBlockComponent blockIndex={index} form={form} />
+                      {contentImages[index]?.previewUrl ? (
+                        <div className="relative w-full h-64 border rounded-lg overflow-hidden">
+                          <Image
+                            src={contentImages[index].previewUrl!}
+                            alt="Content image"
+                            width={800}
+                            height={400}
+                            className="object-cover w-full h-full"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeContentImage(index)}
+                            className="absolute size-8 top-3 right-3 rounded-full"
+                          >
+                            <X className="size-5" />
+                          </Button>
+                          {contentImages[index]?.isUploading && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <Loader2 className="w-8 h-8 text-white animate-spin" />
+                            </div>
+                          )}
+                          {contentImages[index]?.error && (
+                            <div className="absolute bottom-2 left-2 right-2 bg-red-500 text-white text-xs p-2 rounded">
+                              {contentImages[index].error}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg py-12 text-center">
+                          <div className="space-y-4">
+                            <div className="text-gray-600">Upload Image</div>
+                            <label htmlFor={`content-image-${index}`}>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="text-gray-600"
+                                asChild
+                              >
+                                <span>
+                                  <Upload className="w-4 h-4 mr-2" />
+                                  Upload
+                                </span>
+                              </Button>
+                            </label>
+                            <input
+                              id={`content-image-${index}`}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleContentImageChange(index)}
+                              className="hidden"
+                            />
+                            <div className="text-xs text-gray-400">
+                              Images will be uploaded when you publish
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
+                  )}
+
+                  {field.type === "list" && (
+                    <ListBlockComponent blockIndex={index} form={form} />
                   )}
                 </div>
               ))}
@@ -519,6 +681,58 @@ const CreateBlogView = () => {
             )}
           </FormItem>
 
+          {/* Categories */}
+          <FormField
+            control={form.control}
+            name="categoryIds"
+            render={({ field }) => {
+
+              const selected = field.value ?? [];
+
+              const toggleCategory = (id: string) => {
+                if (selected.includes(id)) {
+                  field.onChange(selected.filter((c) => c !== id));
+                } else if (selected.length < 3) {
+                  field.onChange([...selected, id]);
+                }
+              };
+
+              return (
+                <FormItem>
+                  <FormLabel>Categories</FormLabel>
+                  <FormDescription className="text-xs">
+                    Select up to 3 categories
+                  </FormDescription>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {categories?.map((category) => {
+                      const isSelected = selected.includes(category.id);
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => toggleCategory(category.id)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                            isSelected
+                              ? "bg-primary-200 text-white border-primary-200"
+                              : "bg-white text-gray-600 border-gray-300 hover:border-primary-200",
+                            !isSelected &&
+                              selected.length >= 3 &&
+                              "opacity-50 cursor-not-allowed",
+                          )}
+                          disabled={!isSelected && selected.length >= 3}
+                        >
+                          {category.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
+
           {/* Status */}
           <FormField
             control={form.control}
@@ -557,33 +771,43 @@ const ListBlockComponent = ({
   blockIndex: number;
   form: UseFormReturn<z.infer<typeof createBlogSchema>>;
 }) => {
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: `contentBlocks.${blockIndex}.items`,
-  });
+  const items = (form.watch(
+    `contentBlocks.${blockIndex}.items`,
+  ) as string[]) ?? [""];
+
+  const updateItem = (itemIndex: number, value: string) => {
+    const updated = [...items];
+    updated[itemIndex] = value;
+    form.setValue(`contentBlocks.${blockIndex}.items`, updated);
+  };
+
+  const addItem = () => {
+    form.setValue(`contentBlocks.${blockIndex}.items`, [...items, ""]);
+  };
+
+  const removeItem = (itemIndex: number) => {
+    form.setValue(
+      `contentBlocks.${blockIndex}.items`,
+      items.filter((_, i) => i !== itemIndex),
+    );
+  };
 
   return (
     <div className="space-y-3">
       <FormLabel>List Items</FormLabel>
-      {fields.map((item, itemIndex) => (
-        <div key={item.id} className="flex items-center gap-2">
-          <FormField
-            control={form.control}
-            name={`contentBlocks.${blockIndex}.items.${itemIndex}.text`}
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormControl>
-                  <Input placeholder="List item..." {...field} />
-                </FormControl>
-              </FormItem>
-            )}
+      {items.map((item, itemIndex) => (
+        <div key={itemIndex} className="flex items-center gap-2">
+          <Input
+            placeholder="List item..."
+            value={item}
+            onChange={(e) => updateItem(itemIndex, e.target.value)}
           />
-          {fields.length > 1 && (
+          {items.length > 1 && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => remove(itemIndex)}
+              onClick={() => removeItem(itemIndex)}
               className="text-red-500 hover:text-red-700"
             >
               <X className="w-4 h-4" />
@@ -594,103 +818,11 @@ const ListBlockComponent = ({
       <Button
         type="button"
         variant="ghost"
-        onClick={() => append({ text: "" })}
+        onClick={addItem}
         className="text-primary-200 hover:text-primary-300 p-0 h-auto font-normal"
       >
         + Add Item
       </Button>
-    </div>
-  );
-};
-
-const ImageBlockComponent = ({
-  blockIndex,
-  form,
-}: {
-  blockIndex: number;
-  form: UseFormReturn<z.infer<typeof createBlogSchema>>;
-}) => {
-  const { isUploading, previewUrl, uploadFile, removeFile, handleFileChange } =
-    useImageUpload({
-      folder: "blogs/content",
-      uploadPreset: "blog_content_images",
-      maxFileSize: 30 * 1024 * 1024,
-    });
-
-  const handleUpload = async () => {
-    const url = await uploadFile();
-    if (url) {
-      form.setValue(`contentBlocks.${blockIndex}.url`, url);
-      form.setValue(`contentBlocks.${blockIndex}.value`, url);
-    }
-  };
-
-  return (
-    <div>
-      {previewUrl ? (
-        <div className="relative w-full h-64 border rounded-lg overflow-hidden">
-          <Image
-            src={previewUrl}
-            alt="Content image"
-            width={800}
-            height={400}
-            className="object-cover w-full h-full"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={removeFile}
-            className="absolute size-8 top-3 right-3 rounded-full"
-          >
-            <X className="size-5" />
-          </Button>
-          {!form.getValues(`contentBlocks.${blockIndex}.url`) && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleUpload}
-              disabled={isUploading}
-              className="absolute bottom-3 right-3"
-            >
-              {isUploading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                "Upload"
-              )}
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg py-12 text-center">
-          <div className="space-y-4">
-            <div className="text-gray-600">Upload Image</div>
-            <label htmlFor={`content-image-${blockIndex}`}>
-              <Button
-                type="button"
-                variant="outline"
-                className="text-gray-600"
-                asChild
-              >
-                <span>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload
-                </span>
-              </Button>
-            </label>
-            <input
-              id={`content-image-${blockIndex}`}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <div className="text-xs text-gray-400">
-              Max file size 30 MB | Supported: JPG, PNG, WEBP
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

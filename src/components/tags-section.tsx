@@ -18,6 +18,8 @@ const TagsSection = ({ tags, onTagClick }: TagsSectionProps) => {
     }
   };
 
+  if (tags.length === 0) return null;
+
   return (
     <div className="w-full mx-auto bg-white">
       <h2 className="text-xl font-bold text-gray-800 mb-4">Tags</h2>

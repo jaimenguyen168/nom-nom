@@ -8,18 +8,18 @@ import { useRecipeRecommendations } from "@/hooks/trpcHooks/use-recipes";
 
 interface RecipeRecommendationGridProps {
   recipeId: string;
+  title?: string;
 }
 
 const RecipeRecommendationGrid = ({
   recipeId,
+  title = "You May Also Like",
 }: RecipeRecommendationGridProps) => {
   const { data: recipes } = useRecipeRecommendations(recipeId);
 
   return (
     <div className="w-full mx-auto bg-white pt-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-8">
-        You May Also Like
-      </h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-8">{title}</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {recipes.map((recipe) => (

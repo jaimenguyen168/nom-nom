@@ -40,7 +40,7 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
   const tags = data.tags;
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16 pt-8">
+    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
       {/* Breadcrumb */}
       <Breadcrumb className="mb-8">
         <BreadcrumbList>
@@ -59,8 +59,9 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
       </Breadcrumb>
 
       {/* Title + Call to Action */}
-      <div className="w-full flex items-center justify-between">
+      <div className="w-full flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
         <TitleInfoHeader
+          type="recipe"
           recipeId={recipe.id}
           title={recipe.title}
           authorId={user.id}
@@ -71,12 +72,14 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
           rating={0}
           ratingCount={0}
         />
-        <CallToAction
-          type="recipe"
-          recipeId={recipe.id}
-          username={username}
-          slug={recipeSlug}
-        />
+        <div className="mb-2 sm:mt-2 shrink-0">
+          <CallToAction
+            type="recipe"
+            recipeId={recipe.id}
+            username={username}
+            slug={recipeSlug}
+          />
+        </div>
       </div>
 
       {/* Main Layout - Two Columns */}
