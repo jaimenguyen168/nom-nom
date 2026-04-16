@@ -49,6 +49,7 @@ import { useCreateBlog } from "@/hooks/trpcHooks/use-blogs";
 import { cn, slugify } from "@/lib/utils";
 import AppTitle from "@/components/app-title";
 import { useGetCategories } from "@/hooks/trpcHooks/use-categories";
+import { Switch } from "@/components/ui/switch";
 
 type CreateBlogForm = z.infer<typeof createBlogSchema>;
 type ContentBlock = z.infer<typeof contentBlockSchema>;
@@ -90,7 +91,6 @@ const CreateBlogView = () => {
     maxFileSize: 30 * 1024 * 1024,
   });
 
-  // Track content images separately by block index
   const [contentImages, setContentImages] = useState<
     Record<number, ContentImageState>
   >({});
@@ -101,6 +101,7 @@ const CreateBlogView = () => {
   });
 
   const watchTitle = useWatch({ control: form.control, name: "title" });
+  const watchStatus = useWatch({ control: form.control, name: "status" });
 
   useEffect(() => {
     if (watchTitle) {
@@ -268,15 +269,17 @@ const CreateBlogView = () => {
     <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
       <div className="flex justify-between items-center pt-6 pb-16">
         <AppTitle title="Create new blog post" />
-        <Button
-          type="submit"
-          form="blog-form"
-          className="px-8"
-          disabled={isLoading}
-        >
-          {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          {isLoading ? "Publishing..." : "Publish"}
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            className="text-transparent! bg-linear-to-r! from-purple-500! via-pink-500! to-orange-500! bg-clip-text! hover:from-purple-600! hover:via-pink-600! hover:to-orange-600! font-medium"
+            onClick={() => router.push("/blogs/new?agent=true")}
+          >
+            <span className="flex items-center gap-2 text-xl">
+              Inspire me ✨
+            </span>
+          </Button>
+        </div>
       </div>
 
       <Form {...form}>
@@ -686,7 +689,6 @@ const CreateBlogView = () => {
             control={form.control}
             name="categoryIds"
             render={({ field }) => {
-
               const selected = field.value ?? [];
 
               const toggleCategory = (id: string) => {
@@ -734,28 +736,51 @@ const CreateBlogView = () => {
           />
 
           {/* Status */}
+          {/* Status */}
           <FormField
             control={form.control}
             name="status"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Publication Status</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
+              <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <FormLabel className="text-base">
+                    {field.value === "published" ? "Published" : "Draft"}
+                  </FormLabel>
+                  <FormDescription>
+                    {field.value === "published"
+                      ? "Anyone can see this blog post"
+                      : "Only you can see this blog post"}
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value === "published"}
+                    onCheckedChange={(checked) =>
+                      field.onChange(checked ? "published" : "draft")
+                    }
+                  />
+                </FormControl>
               </FormItem>
             )}
           />
+
+          {/* Submit */}
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              form="blog-form"
+              className="w-32"
+              disabled={isLoading}
+              variant={watchStatus === "published" ? "default" : "outline"}
+            >
+              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isLoading
+                ? "Saving..."
+                : watchStatus === "published"
+                  ? "Publish"
+                  : "Save Draft"}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>
