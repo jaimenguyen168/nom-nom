@@ -78,6 +78,8 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
             recipeId={recipe.id}
             username={username}
             slug={recipeSlug}
+            authorId={user.id}
+
           />
         </div>
       </div>

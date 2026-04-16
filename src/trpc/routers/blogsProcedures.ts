@@ -299,4 +299,70 @@ export const blogsRouter = createTRPCRouter({
         .groupBy(blogs.id, users.username)
         .limit(6);
     }),
+
+  update: authProcedure
+    .input(createBlogSchema.extend({ blogId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await nomnomDb
+        .select()
+        .from(blogs)
+        .where(and(eq(blogs.id, input.blogId), eq(blogs.authorId, ctx.userId)))
+        .then((rows) => rows[0]);
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Blog not found" });
+      }
+
+      await nomnomDb
+        .update(blogs)
+        .set({
+          title: input.title,
+          slug: input.slug,
+          excerpt: input.excerpt,
+          featuredImage: input.featuredImage,
+          topic: input.topic,
+          contentBlocks: input.contentBlocks,
+          status: input.status,
+          publishedAt:
+            input.status === "published" && !existing.publishedAt
+              ? new Date()
+              : existing.publishedAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(blogs.id, input.blogId));
+
+      await Promise.all([
+        nomnomDb.delete(blogTags).where(eq(blogTags.blogId, input.blogId)),
+        nomnomDb
+          .delete(blogCategories)
+          .where(eq(blogCategories.blogId, input.blogId)),
+      ]);
+
+      await Promise.all([
+        input.tags &&
+          input.tags.length > 0 &&
+          nomnomDb.insert(blogTags).values(
+            input.tags.map((tag) => ({
+              name: tag.name,
+              blogId: input.blogId,
+            })),
+          ),
+        input.categoryIds &&
+          input.categoryIds.length > 0 &&
+          nomnomDb.insert(blogCategories).values(
+            input.categoryIds.map((categoryId) => ({
+              categoryId,
+              blogId: input.blogId,
+            })),
+          ),
+      ]);
+
+      const user = await nomnomDb
+        .select()
+        .from(users)
+        .where(eq(users.id, ctx.userId))
+        .then((rows) => rows[0]);
+
+      return { username: user.username, blogSlug: existing.slug };
+    }),
 });

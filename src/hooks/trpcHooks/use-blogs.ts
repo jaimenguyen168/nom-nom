@@ -82,3 +82,18 @@ export const useGetBlogsBySameCategories = (blogId: string) => {
     trpc.blogs.getBySameCategories.queryOptions({ blogId }),
   );
 };
+
+export const useUpdateBlog = (username: string, slug: string) => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    trpc.blogs.update.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.blogs.getByUsernameAndSlug.queryOptions({ username, slug }),
+        );
+      },
+    }),
+  );
+};

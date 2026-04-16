@@ -84,6 +84,7 @@ export default function BlogDetailsView({ username, blogSlug }: Props) {
             blogId={blog?.id}
             username={username}
             slug={blogSlug}
+            authorId={user.id}
           />
         </div>
       </div>
