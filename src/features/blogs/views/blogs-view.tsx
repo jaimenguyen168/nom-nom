@@ -16,26 +16,22 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { useGetBlogs } from "@/hooks/trpcHooks/use-blogs";
+import { BlogSortType, useGetBlogs } from "@/hooks/trpcHooks/use-blogs";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 import BlogCard from "@/features/blogs/components/blog-card";
-
-type BlogSortType = "new" | "popular" | "a_z";
+import AppPagination from "@/components/app-pagination";
+import { PAGE_SIZE } from "@/features/blogs/constants";
 
 const BlogsView = () => {
   const { userId } = useAuth();
   const [sortBy, setSortBy] = useState<BlogSortType>("new");
   const [page, setPage] = useState(1);
-  const pageSize = 12;
 
-  const { data } = useGetBlogs(sortBy, pageSize, page);
+  const { data } = useGetBlogs(sortBy, PAGE_SIZE, page);
 
   const blogs = data?.items ?? [];
-  const total = data?.total ?? 0;
-  const hasMore = data?.hasMore ?? false;
 
   const [featuredBlog, ...remainingBlogs] = blogs;
 
@@ -105,21 +101,12 @@ const BlogsView = () => {
         </>
       )}
 
-      <div className="flex justify-center gap-4">
-        {page > 1 && (
-          <Button variant="outline" onClick={() => setPage((p) => p - 1)}>
-            Previous
-          </Button>
-        )}
-        {hasMore && (
-          <Button onClick={() => setPage((p) => p + 1)}>Load more</Button>
-        )}
-      </div>
-
-      {!hasMore && total > 0 && (
-        <p className="text-center text-gray-500 py-8">
-          You&apos;ve seen all {total} blogs!
-        </p>
+      {data.totalPages > 1 && (
+        <AppPagination
+          currentPage={page}
+          totalPages={data.totalPages}
+          onPageChange={setPage}
+        />
       )}
     </div>
   );

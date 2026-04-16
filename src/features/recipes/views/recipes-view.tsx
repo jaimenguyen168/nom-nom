@@ -16,12 +16,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
 import { useGetRecipes } from "@/hooks/trpcHooks/use-recipes";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 import RecipeCard from "@/features/recipes/components/recipe-card";
+import AppPagination from "@/components/app-pagination";
+import { PAGE_SIZE } from "@/features/recipes/constants";
 
 type RecipeFeedType = "trending" | "popular" | "new" | "a_z" | "relevance";
 
@@ -29,13 +30,10 @@ const RecipesView = () => {
   const { userId } = useAuth();
   const [sortBy, setSortBy] = useState<RecipeFeedType>("new");
   const [page, setPage] = useState(1);
-  const pageSize = 12;
 
-  const { data } = useGetRecipes(sortBy, pageSize, page);
+  const { data } = useGetRecipes(sortBy, PAGE_SIZE, page);
 
   const recipes = data?.items ?? [];
-  const total = data?.total ?? 0;
-  const hasMore = data?.hasMore ?? false;
 
   const handleSortChange = (value: RecipeFeedType) => {
     setSortBy(value);
@@ -104,21 +102,12 @@ const RecipesView = () => {
       )}
 
       {/* Pagination */}
-      <div className="flex justify-center gap-4">
-        {page > 1 && (
-          <Button variant="outline" onClick={() => setPage((p) => p - 1)}>
-            Previous
-          </Button>
-        )}
-        {hasMore && (
-          <Button onClick={() => setPage((p) => p + 1)}>Load more</Button>
-        )}
-      </div>
-
-      {!hasMore && total > 0 && (
-        <p className="text-center text-gray-500 py-8">
-          You&apos;ve seen all {total} recipes!
-        </p>
+      {data.totalPages > 1 && (
+        <AppPagination
+          currentPage={page}
+          totalPages={data.totalPages}
+          onPageChange={setPage}
+        />
       )}
     </div>
   );

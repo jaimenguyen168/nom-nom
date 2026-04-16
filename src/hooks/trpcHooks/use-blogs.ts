@@ -6,6 +6,8 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 
+export type BlogSortType = "new" | "popular" | "a_z";
+
 export const useCreateBlog = () => {
   const trpc = useTRPC();
   return useMutation(trpc.blogs.create.mutationOptions());
@@ -20,7 +22,7 @@ export const useGetBlog = (username: string, slug: string) => {
 };
 
 export const useGetBlogs = (
-  sortBy: "new" | "popular" | "a_z" = "new",
+  sortBy: BlogSortType = "new",
   pageSize = 12,
   page = 1,
 ) => {
