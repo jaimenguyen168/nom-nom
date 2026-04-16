@@ -1,5 +1,15 @@
 import React from "react";
+import BlogsView from "@/features/blogs/views/blogs-view";
+import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 
-export default function PublicBlogsPage() {
-  return <div>PublicBlogsPage</div>;
+export const dynamic = "force-dynamic";
+
+export default async function BlogsPage() {
+  prefetch(trpc.blogs.getMany.queryOptions({}));
+
+  return (
+    <HydrateClient>
+      <BlogsView />
+    </HydrateClient>
+  );
 }

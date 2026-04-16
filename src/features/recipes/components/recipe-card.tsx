@@ -43,7 +43,7 @@ const RecipeCard = ({ recipe }: RecipeCardProps) => {
   );
 
   const handleNavigation = () => {
-    router.push(`/${username}/${recipe.slug}`);
+    router.push(`/recipes/${username}/${recipe.slug}`);
   };
 
   const handleGoToAuthor = (e: React.MouseEvent) => {

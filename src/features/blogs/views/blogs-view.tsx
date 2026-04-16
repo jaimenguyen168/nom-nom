@@ -16,33 +16,32 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { useGetRecipes } from "@/hooks/trpcHooks/use-recipes";
+import { BlogSortType, useGetBlogs } from "@/hooks/trpcHooks/use-blogs";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
-import RecipeCard from "@/features/recipes/components/recipe-card";
+import BlogCard from "@/features/blogs/components/blog-card";
 import AppPagination from "@/components/app-pagination";
-import { PAGE_SIZE } from "@/features/recipes/constants";
+import { PAGE_SIZE } from "@/features/blogs/constants";
 
-type RecipeFeedType = "trending" | "popular" | "new" | "a_z" | "relevance";
-
-const RecipesView = () => {
+const BlogsView = () => {
   const { userId } = useAuth();
-  const [sortBy, setSortBy] = useState<RecipeFeedType>("new");
+  const [sortBy, setSortBy] = useState<BlogSortType>("new");
   const [page, setPage] = useState(1);
 
-  const { data } = useGetRecipes(sortBy, PAGE_SIZE, page);
+  const { data } = useGetBlogs(sortBy, PAGE_SIZE, page);
 
-  const recipes = data?.items ?? [];
+  const blogs = data?.items ?? [];
 
-  const handleSortChange = (value: RecipeFeedType) => {
+  const [featuredBlog, ...remainingBlogs] = blogs;
+
+  const handleSortChange = (value: BlogSortType) => {
     setSortBy(value);
     setPage(1);
   };
 
   return (
     <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      {/* Breadcrumb */}
       <Breadcrumb className="mb-6">
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -50,22 +49,20 @@ const RecipesView = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Recipes</BreadcrumbPage>
+            <BreadcrumbPage>Blogs</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold">Recipes</h1>
+          <h1 className="text-3xl font-bold">Blogs</h1>
           {userId && (
-            <Link href="/recipes/new">
+            <Link href="/blogs/new">
               <PlusCircle className="size-7 text-primary-200 cursor-pointer hover:text-primary-200/80" />
             </Link>
           )}
         </div>
-
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Sort by:</span>
           <Select value={sortBy} onValueChange={handleSortChange}>
@@ -74,34 +71,36 @@ const RecipesView = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="new">Newest</SelectItem>
-              <SelectItem value="trending">Trending</SelectItem>
               <SelectItem value="popular">Popular</SelectItem>
               <SelectItem value="a_z">A to Z</SelectItem>
-              <SelectItem value="relevance">Relevance</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* Grid */}
-      {recipes.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-          {recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
-          ))}
-        </div>
-      ) : (
+      {blogs.length === 0 ? (
         <div className="text-center py-16">
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            No recipes found
+            No blogs found
           </h3>
-          <p className="text-gray-500">
-            Try adjusting your sort or check back later.
-          </p>
+          <p className="text-gray-500">Check back later for new posts.</p>
         </div>
+      ) : (
+        <>
+          {/* Featured Blog */}
+          {featuredBlog && page === 1 && (
+            <BlogCard blog={featuredBlog} size="large" />
+          )}
+
+          {/* Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+            {(page === 1 ? remainingBlogs : blogs).map((blog) => (
+              <BlogCard key={blog.id} blog={blog} />
+            ))}
+          </div>
+        </>
       )}
 
-      {/* Pagination */}
       {data.totalPages > 1 && (
         <AppPagination
           currentPage={page}
@@ -113,4 +112,4 @@ const RecipesView = () => {
   );
 };
 
-export default RecipesView;
+export default BlogsView;
