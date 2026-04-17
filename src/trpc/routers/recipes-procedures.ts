@@ -121,9 +121,19 @@ export const recipesRouter = createTRPCRouter({
       const orderBy =
         sortBy === "a_z"
           ? asc(recipes.title)
-          : sortBy === "popular" || sortBy === "trending"
-            ? desc(avg(recipeReviews.rating))
-            : desc(recipes.createdAt);
+          : sortBy === "popular"
+            ? desc(count(userSavedRecipes.id))
+            : sortBy === "trending"
+              ? desc(count(recipeTags.id))
+              : sortBy === "relevance"
+                ? desc(
+                    sql`(
+                      COALESCE(${avg(recipeReviews.rating)}, 0) * 0.4 +
+                      COUNT(DISTINCT ${userSavedRecipes.id}) * 0.4 +
+                      EXTRACT(EPOCH FROM ${recipes.createdAt}) / 1000000000 * 0.2
+                    )`,
+                  )
+                : desc(recipes.createdAt);
 
       const data = await nomnomDb
         .select({
@@ -146,6 +156,8 @@ export const recipesRouter = createTRPCRouter({
         .leftJoin(recipeReviews, eq(recipeReviews.recipeId, recipes.id))
         .leftJoin(recipeNutrition, eq(recipeNutrition.recipeId, recipes.id))
         .leftJoin(users, eq(recipes.userId, users.id))
+        .leftJoin(userSavedRecipes, eq(userSavedRecipes.recipeId, recipes.id))
+        .leftJoin(recipeTags, eq(recipeTags.recipeId, recipes.id))
         .where(eq(recipes.isPublic, true))
         .groupBy(recipes.id, users.username, users.profileImageUrl)
         .orderBy(orderBy)
@@ -285,13 +297,13 @@ export const recipesRouter = createTRPCRouter({
   savesCount: publicProcedure
     .input(z.object({ recipeId: z.string() }))
     .query(async ({ input }) => {
-      const count = await nomnomDb
+      const total = await nomnomDb
         .select()
         .from(userSavedRecipes)
         .where(eq(userSavedRecipes.recipeId, input.recipeId))
         .then((rows) => rows.length);
 
-      return { savesCount: count };
+      return { savesCount: total };
     }),
 
   getRecommendations: publicProcedure
@@ -401,9 +413,19 @@ export const recipesRouter = createTRPCRouter({
       const orderBy =
         sortBy === "a_z"
           ? asc(recipes.title)
-          : sortBy === "popular" || sortBy === "trending"
-            ? desc(avg(recipeReviews.rating))
-            : desc(recipes.createdAt);
+          : sortBy === "popular"
+            ? desc(count(userSavedRecipes.id))
+            : sortBy === "trending"
+              ? desc(count(recipeTags.id))
+              : sortBy === "relevance"
+                ? desc(
+                    sql`(
+                      COALESCE(${avg(recipeReviews.rating)}, 0) * 0.4 +
+                      COUNT(DISTINCT ${userSavedRecipes.id}) * 0.4 +
+                      EXTRACT(EPOCH FROM ${recipes.createdAt}) / 1000000000 * 0.2
+                    )`,
+                  )
+                : desc(recipes.createdAt);
 
       const data = await nomnomDb
         .select({
@@ -428,6 +450,8 @@ export const recipesRouter = createTRPCRouter({
         .leftJoin(recipeReviews, eq(recipeReviews.recipeId, recipes.id))
         .leftJoin(recipeNutrition, eq(recipeNutrition.recipeId, recipes.id))
         .leftJoin(users, eq(recipes.userId, users.id))
+        .leftJoin(userSavedRecipes, eq(userSavedRecipes.recipeId, recipes.id))
+        .leftJoin(recipeTags, eq(recipeTags.recipeId, recipes.id))
         .where(
           and(eq(recipes.isPublic, true), eq(categories.key, categorySlug)),
         )
@@ -494,7 +518,6 @@ export const recipesRouter = createTRPCRouter({
         })
         .where(eq(recipes.id, input.recipeId));
 
-      // delete and re-insert related data
       await Promise.all([
         nomnomDb
           .delete(recipeIngredients)

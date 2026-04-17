@@ -104,7 +104,11 @@ export const blogsRouter = createTRPCRouter({
       const { page, pageSize, sortBy } = input;
 
       const orderBy =
-        sortBy === "a_z" ? asc(blogs.title) : desc(blogs.createdAt);
+        sortBy === "a_z"
+          ? asc(blogs.title)
+          : sortBy === "popular"
+            ? desc(count(userSavedBlogs.id))
+            : desc(blogs.createdAt);
 
       const data = await nomnomDb
         .select({
@@ -122,7 +126,9 @@ export const blogsRouter = createTRPCRouter({
         })
         .from(blogs)
         .leftJoin(users, eq(blogs.authorId, users.id))
+        .leftJoin(userSavedBlogs, eq(userSavedBlogs.blogId, blogs.id))
         .where(eq(blogs.status, "published"))
+        .groupBy(blogs.id, users.username, users.profileImageUrl)
         .orderBy(orderBy)
         .limit(pageSize)
         .offset((page - 1) * pageSize);

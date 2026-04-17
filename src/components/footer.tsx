@@ -9,7 +9,7 @@ import AppLogo from "@/components/app-logo";
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-100 text-gray-700 px-8 md:px-12 py-10">
+    <footer className="bg-gray-100 text-gray-700 px-8 md:px-12 py-10 mt-16">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* Logo */}
