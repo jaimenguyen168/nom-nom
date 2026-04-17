@@ -1,12 +1,19 @@
 "use client";
 
 import React from "react";
-import { BookmarkIcon, PrinterIcon, Share2Icon } from "lucide-react";
+import {
+  BookmarkIcon,
+  PencilIcon,
+  PrinterIcon,
+  Share2Icon,
+} from "lucide-react";
 import {
   useIsSavedRecipe,
   useToggleSaveRecipe,
 } from "@/hooks/trpcHooks/use-recipes";
 import { useIsSavedBlog, useToggleSaveBlog } from "@/hooks/trpcHooks/use-blogs";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 interface BaseCallToActionProps {
   username: string;
@@ -17,18 +24,28 @@ interface BaseCallToActionProps {
 interface RecipeCallToActionProps extends BaseCallToActionProps {
   type: "recipe";
   recipeId: string;
+  authorId: string;
 }
 
 interface BlogCallToActionProps extends BaseCallToActionProps {
   type: "blog";
   blogId: string;
+  authorId: string;
 }
 
 type CallToActionProps = RecipeCallToActionProps | BlogCallToActionProps;
 
 const CallToAction = (props: CallToActionProps) => {
+  const router = useRouter();
+  const { userId } = useAuth();
+
   const recipeId = props.type === "recipe" ? props.recipeId : "";
   const blogId = props.type === "blog" ? props.blogId : "";
+
+  const editPath =
+    props.type === "recipe"
+      ? `/recipes/${props.username}/${props.slug}/edit`
+      : `/blogs/${props.username}/${props.slug}/edit`;
 
   const { data: recipeSaveData } = useIsSavedRecipe(recipeId);
   const { handleToggleSave: toggleRecipe, isPending: recipeIsPending } =
@@ -56,6 +73,14 @@ const CallToAction = (props: CallToActionProps) => {
       >
         <BookmarkIcon fill={isSaved ? "currentColor" : "none"} />
       </button>
+      {userId === props.authorId && (
+        <button
+          className="cursor-pointer"
+          onClick={() => router.push(editPath)}
+        >
+          <PencilIcon className="size-5" />
+        </button>
+      )}
       <Share2Icon className="cursor-pointer" />
       <PrinterIcon className="cursor-pointer" />
     </div>

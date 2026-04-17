@@ -99,3 +99,18 @@ export const useGetRecipesByCategory = (
     }),
   );
 };
+
+export const useUpdateRecipe = (username: string, slug: string) => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    trpc.recipes.update.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.recipes.getByUsernameAndSlug.queryOptions({ username, slug }),
+        );
+      },
+    }),
+  );
+};

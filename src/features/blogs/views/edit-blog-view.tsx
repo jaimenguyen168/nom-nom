@@ -1,57 +1,29 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import {
-  useFieldArray,
-  useForm,
-  UseFormReturn,
-  useWatch,
-} from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useFieldArray, useForm, UseFormReturn, useWatch } from "react-hook-form";
 import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { FileText, Heading, ImageIcon, List, Loader2, Quote, Trash2Icon, Upload, X } from "lucide-react";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import Image from "next/image";
-import { Badge } from "@/components/ui/badge";
-import {
-  FileText,
-  Heading,
-  ImageIcon,
-  List,
-  Loader2,
-  Quote,
-  Trash2Icon,
-  Upload,
-  X,
-} from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { createBlogSchema, contentBlockSchema } from "@/db/schemas/blogs";
 import { useImageUpload } from "@/hooks/use-image-upload";
-import { useCreateBlog } from "@/hooks/trpcHooks/use-blogs";
-import { cn, slugify } from "@/lib/utils";
+import { useGetBlog, useUpdateBlog } from "@/hooks/trpcHooks/use-blogs";
+import { contentBlockSchema, createBlogSchema } from "@/db/schemas/blogs";
+import { Switch } from "@/components/ui/switch";
 import AppTitle from "@/components/app-title";
 import { useGetCategories } from "@/hooks/trpcHooks/use-categories";
-import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@clerk/nextjs";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type CreateBlogForm = z.infer<typeof createBlogSchema>;
+type EditBlogForm = z.infer<typeof createBlogSchema>;
 type ContentBlock = z.infer<typeof contentBlockSchema>;
 type ContentBlockType = ContentBlock["type"];
 
@@ -63,54 +35,87 @@ interface ContentImageState {
   error: string | null;
 }
 
-const blogDefaultValues: CreateBlogForm = {
-  title: "",
-  slug: "",
-  excerpt: "",
-  featuredImage: "",
-  topic: "",
-  contentBlocks: [{ type: "paragraph", value: "" }],
-  status: "draft",
-  tags: [],
-};
+interface Props {
+  username: string;
+  blogSlug: string;
+}
 
-const CreateBlogView = () => {
+export default function EditBlogView({ username, blogSlug }: Props) {
+  const { data } = useGetBlog(username, blogSlug);
+  const { userId } = useAuth();
   const router = useRouter();
-  const createBlog = useCreateBlog();
+
+  const blog = data.blogs;
+  const isOwner = userId === blog.authorId;
+
+  useEffect(() => {
+    if (!isOwner) {
+      router.replace(`/blogs/${username}/${blogSlug}`);
+    }
+  }, [isOwner, router, username, blogSlug]);
+
+  if (!isOwner) return null;
+
+  return <EditBlogForm data={data} username={username} blogSlug={blogSlug} />;
+}
+
+function EditBlogForm({
+  data,
+  username,
+  blogSlug,
+}: {
+  data: ReturnType<typeof useGetBlog>["data"];
+  username: string;
+  blogSlug: string;
+}) {
+  const router = useRouter();
+  const { data: categories } = useGetCategories();
+  const updateBlog = useUpdateBlog(username, blogSlug);
+
+  const blog = data.blogs;
+  const tags = data.tags;
+
+  const path = `/blogs/${username}/${blogSlug}`;
 
   const {
-    isUploading: isFeaturedImageUploading,
-    previewUrl: featuredImagePreview,
-    uploadFile: uploadFeaturedImage,
-    removeFile: removeFeaturedImage,
-    handleFileChange: handleFeaturedImageChange,
-    hasFile: hasFeaturedImage,
+    isUploading,
+    previewUrl,
+    uploadFile,
+    removeFile,
+    handleFileChange,
+    hasFile,
   } = useImageUpload({
     folder: "blogs/featured",
     uploadPreset: "blog_content_images",
     maxFileSize: 30 * 1024 * 1024,
   });
 
+  const [existingImageUrl, setExistingImageUrl] = useState(
+    blog.featuredImage ?? "",
+  );
   const [contentImages, setContentImages] = useState<
     Record<number, ContentImageState>
   >({});
+  const [tagInput, setTagInput] = useState("");
 
-  const form = useForm<CreateBlogForm>({
+  const form = useForm<EditBlogForm>({
     resolver: zodResolver(createBlogSchema),
-    defaultValues: blogDefaultValues,
+    defaultValues: {
+      title: blog.title,
+      slug: blog.slug,
+      excerpt: blog.excerpt ?? "",
+      featuredImage: blog.featuredImage ?? "",
+      topic: blog.topic ?? "",
+      contentBlocks: (blog.contentBlocks as ContentBlock[]) ?? [
+        { type: "paragraph", value: "" },
+      ],
+      status: blog.status ?? "draft",
+      tags: tags.map((t) => ({ name: t.name })),
+      categoryIds: [],
+    },
   });
 
-  const watchTitle = useWatch({ control: form.control, name: "title" });
   const watchStatus = useWatch({ control: form.control, name: "status" });
-
-  useEffect(() => {
-    if (watchTitle) {
-      form.setValue("slug", slugify(watchTitle), { shouldValidate: false });
-    }
-  }, [watchTitle, form]);
-
-  const [tagInput, setTagInput] = useState("");
-  const { data: categories } = useGetCategories();
 
   const {
     fields: contentFields,
@@ -128,7 +133,6 @@ const CreateBlogView = () => {
     (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-
       const previewUrl = URL.createObjectURL(file);
       setContentImages((prev) => ({
         ...prev,
@@ -145,9 +149,8 @@ const CreateBlogView = () => {
   const removeContentImage = (index: number) => {
     setContentImages((prev) => {
       const updated = { ...prev };
-      if (updated[index]?.previewUrl) {
+      if (updated[index]?.previewUrl)
         URL.revokeObjectURL(updated[index].previewUrl!);
-      }
       delete updated[index];
       return updated;
     });
@@ -158,73 +161,57 @@ const CreateBlogView = () => {
     formData.append("file", file);
     formData.append("upload_preset", "blog_content_images");
     formData.append("folder", "blogs/content");
-
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
       { method: "POST", body: formData },
     );
-
     if (!response.ok) throw new Error("Upload failed");
     const data = await response.json();
     return data.secure_url;
   };
 
-  const onSubmit = async (data: CreateBlogForm) => {
+  const onSubmit = async (formData: EditBlogForm) => {
     try {
-      let featuredImageUrl = "";
-      if (hasFeaturedImage) {
-        featuredImageUrl = (await uploadFeaturedImage()) || "";
+      let featuredImageUrl = existingImageUrl;
+      if (hasFile) {
+        featuredImageUrl = (await uploadFile()) || existingImageUrl;
       }
 
-      // Upload all content images
       const uploadedContentImages: Record<number, string> = {};
       for (const [indexStr, imageState] of Object.entries(contentImages)) {
         const index = parseInt(indexStr);
         if (imageState.file && !imageState.uploadedUrl) {
-          setContentImages((prev) => ({
-            ...prev,
-            [index]: { ...prev[index], isUploading: true },
-          }));
           try {
-            const url = await uploadToCloudinary(imageState.file);
-            uploadedContentImages[index] = url;
-            setContentImages((prev) => ({
-              ...prev,
-              [index]: { ...prev[index], uploadedUrl: url, isUploading: false },
-            }));
+
+            uploadedContentImages[index] = await uploadToCloudinary(
+              imageState.file,
+            );
           } catch {
-            setContentImages((prev) => ({
-              ...prev,
-              [index]: {
-                ...prev[index],
-                error: "Upload failed",
-                isUploading: false,
-              },
-            }));
+            toast.error("Failed to upload content image");
           }
         }
       }
 
-      // Map content blocks with uploaded image URLs
-      const updatedContentBlocks = data.contentBlocks.map((block, index) => {
-        if (block.type === "image" && uploadedContentImages[index]) {
-          return { ...block, url: uploadedContentImages[index] };
-        }
-        return block;
-      });
+      const updatedContentBlocks = formData.contentBlocks.map(
+        (block, index) => {
+          if (block.type === "image" && uploadedContentImages[index]) {
+            return { ...block, url: uploadedContentImages[index] };
+          }
+          return block;
+        },
+      );
 
-      await createBlog.mutateAsync(
+      await updateBlog.mutateAsync(
         {
-          ...data,
+          blogId: blog.id,
+          ...formData,
           featuredImage: featuredImageUrl || undefined,
           contentBlocks: updatedContentBlocks,
         },
         {
-          onSuccess: (createdBlog) => {
-            toast.success("Blog created successfully");
-            router.push(
-              `/blogs/${createdBlog.username}/${createdBlog.blogSlug}`,
-            );
+          onSuccess: () => {
+            toast.success("Blog updated successfully");
+            router.push(path);
           },
           onError: (error) => {
             toast.error(error.message);
@@ -232,8 +219,8 @@ const CreateBlogView = () => {
         },
       );
     } catch (error) {
-      console.error("Blog creation error:", error);
-      toast.error("Failed to create blog");
+      console.error("Blog update error:", error);
+      toast.error("Failed to update blog");
     }
   };
 
@@ -256,30 +243,23 @@ const CreateBlogView = () => {
             : type === "image"
               ? { type, value: "", url: "" }
               : { type: "paragraph", value: "" };
-
     appendContent(newBlock);
   };
 
   const isLoading =
-    createBlog.isPending ||
-    isFeaturedImageUploading ||
+    updateBlog.isPending ||
+    isUploading ||
     Object.values(contentImages).some((img) => img.isUploading);
+
+  const displayImageUrl = previewUrl || existingImageUrl;
 
   return (
     <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
       <div className="flex justify-between items-center pt-6 pb-16">
-        <AppTitle title="Create new blog post" />
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            className="text-transparent! bg-linear-to-r! from-purple-500! via-pink-500! to-orange-500! bg-clip-text! hover:from-purple-600! hover:via-pink-600! hover:to-orange-600! font-medium"
-            onClick={() => router.push("/blogs/new?agent=true")}
-          >
-            <span className="flex items-center gap-2 text-xl">
-              Inspire me ✨
-            </span>
-          </Button>
-        </div>
+        <AppTitle title="Edit blog post" />
+        <Button variant="outline" onClick={() => router.push(path)}>
+          Cancel
+        </Button>
       </div>
 
       <Form {...form}>
@@ -309,7 +289,7 @@ const CreateBlogView = () => {
             name="slug"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Path (Auto-generated)</FormLabel>
+                <FormLabel>Path</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="blog-path"
@@ -318,9 +298,7 @@ const CreateBlogView = () => {
                     className="bg-gray-50 cursor-not-allowed"
                   />
                 </FormControl>
-                <FormDescription>
-                  Automatically generated from your title
-                </FormDescription>
+                <FormDescription>Generated from your title</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -351,10 +329,10 @@ const CreateBlogView = () => {
           {/* Featured Image */}
           <FormItem>
             <FormLabel>Featured Image</FormLabel>
-            {featuredImagePreview ? (
+            {displayImageUrl ? (
               <div className="relative w-full h-64 border rounded-lg overflow-hidden">
                 <Image
-                  src={featuredImagePreview}
+                  src={displayImageUrl}
                   alt="Featured image preview"
                   width={1000}
                   height={400}
@@ -364,7 +342,10 @@ const CreateBlogView = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={removeFeaturedImage}
+                  onClick={() => {
+                    removeFile();
+                    setExistingImageUrl("");
+                  }}
                   className="absolute size-8 top-3 right-3 rounded-full"
                 >
                   <X className="size-5" />
@@ -390,7 +371,7 @@ const CreateBlogView = () => {
                     id="featured-image-upload"
                     type="file"
                     accept="image/*"
-                    onChange={handleFeaturedImageChange}
+                    onChange={handleFileChange}
                     className="hidden"
                   />
                   <div className="text-xs text-gray-400 mt-4">
@@ -570,11 +551,6 @@ const CreateBlogView = () => {
                               <Loader2 className="w-8 h-8 text-white animate-spin" />
                             </div>
                           )}
-                          {contentImages[index]?.error && (
-                            <div className="absolute bottom-2 left-2 right-2 bg-red-500 text-white text-xs p-2 rounded">
-                              {contentImages[index].error}
-                            </div>
-                          )}
                         </div>
                       ) : (
                         <div className="border-2 border-dashed border-gray-300 rounded-lg py-12 text-center">
@@ -600,9 +576,6 @@ const CreateBlogView = () => {
                               onChange={handleContentImageChange(index)}
                               className="hidden"
                             />
-                            <div className="text-xs text-gray-400">
-                              Images will be uploaded when you publish
-                            </div>
                           </div>
                         </div>
                       )}
@@ -690,7 +663,6 @@ const CreateBlogView = () => {
             name="categoryIds"
             render={({ field }) => {
               const selected = field.value ?? [];
-
               const toggleCategory = (id: string) => {
                 if (selected.includes(id)) {
                   field.onChange(selected.filter((c) => c !== id));
@@ -698,7 +670,6 @@ const CreateBlogView = () => {
                   field.onChange([...selected, id]);
                 }
               };
-
               return (
                 <FormItem>
                   <FormLabel>Categories</FormLabel>
@@ -736,7 +707,6 @@ const CreateBlogView = () => {
           />
 
           {/* Status */}
-          {/* Status */}
           <FormField
             control={form.control}
             name="status"
@@ -769,15 +739,14 @@ const CreateBlogView = () => {
             <Button
               type="submit"
               form="blog-form"
-              className="w-32"
+              className="px-8"
               disabled={isLoading}
-              variant={watchStatus === "published" ? "default" : "outline"}
             >
               {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {isLoading
                 ? "Saving..."
                 : watchStatus === "published"
-                  ? "Publish"
+                  ? "Update & Publish"
                   : "Save Draft"}
             </Button>
           </div>
@@ -785,9 +754,7 @@ const CreateBlogView = () => {
       </Form>
     </div>
   );
-};
-
-export default CreateBlogView;
+}
 
 const ListBlockComponent = ({
   blockIndex,

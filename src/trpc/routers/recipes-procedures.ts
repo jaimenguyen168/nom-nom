@@ -456,4 +456,110 @@ export const recipesRouter = createTRPCRouter({
         hasMore: page < Math.ceil(totalResult.count / pageSize),
       };
     }),
+
+  update: authProcedure
+    .input(createRecipeSchema.extend({ recipeId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await nomnomDb
+        .select()
+        .from(recipes)
+        .where(
+          and(eq(recipes.id, input.recipeId), eq(recipes.userId, ctx.userId)),
+        )
+        .then((rows) => rows[0]);
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+      }
+
+      await nomnomDb
+        .update(recipes)
+        .set({
+          title: input.title,
+          description: input.description,
+          imageUrl: input.imageUrl,
+          isPublic: input.isPublic,
+          servings: input.servings ? parseInt(input.servings) : 1,
+          prepTimeMinutes:
+            input.prepTime.hours || input.prepTime.minutes
+              ? parseInt(input.prepTime.hours || "0") * 60 +
+                parseInt(input.prepTime.minutes || "0")
+              : undefined,
+          cookTimeMinutes:
+            input.cookingTime.hours || input.cookingTime.minutes
+              ? parseInt(input.cookingTime.hours || "0") * 60 +
+                parseInt(input.cookingTime.minutes || "0")
+              : undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(recipes.id, input.recipeId));
+
+      // delete and re-insert related data
+      await Promise.all([
+        nomnomDb
+          .delete(recipeIngredients)
+          .where(eq(recipeIngredients.recipeId, input.recipeId)),
+        nomnomDb
+          .delete(recipeInstructions)
+          .where(eq(recipeInstructions.recipeId, input.recipeId)),
+        nomnomDb
+          .delete(recipeNutrition)
+          .where(eq(recipeNutrition.recipeId, input.recipeId)),
+        nomnomDb
+          .delete(recipeTags)
+          .where(eq(recipeTags.recipeId, input.recipeId)),
+        nomnomDb
+          .delete(recipeCategories)
+          .where(eq(recipeCategories.recipeId, input.recipeId)),
+      ]);
+
+      await Promise.all([
+        input.ingredients.length > 0 &&
+          nomnomDb.insert(recipeIngredients).values(
+            input.ingredients.map((ing, index) => ({
+              name: ing.name,
+              amount: ing.amount,
+              unit: ing.unit,
+              isOptional: ing.isOptional,
+              orderIndex: index,
+              recipeId: input.recipeId,
+            })),
+          ),
+        input.instructions.length > 0 &&
+          nomnomDb.insert(recipeInstructions).values(
+            input.instructions.map((inst) => ({
+              stepNumber: inst.stepNumber,
+              instruction: inst.instruction,
+              recipeId: input.recipeId,
+            })),
+          ),
+        input.nutrition.length > 0 &&
+          nomnomDb.insert(recipeNutrition).values(
+            input.nutrition.map((n) => ({
+              nutrientName: n.nutrientName,
+              amount: n.amount,
+              unit: n.unit,
+              recipeId: input.recipeId,
+            })),
+          ),
+        input.tags &&
+          input.tags.length > 0 &&
+          nomnomDb.insert(recipeTags).values(
+            input.tags.map((tag) => ({
+              name: tag,
+              recipeId: input.recipeId,
+            })),
+          ),
+        input.categoryIds &&
+          input.categoryIds.length > 0 &&
+          nomnomDb.insert(recipeCategories).values(
+            input.categoryIds.map((categoryId) => ({
+              categoryId,
+              recipeId: input.recipeId,
+            })),
+          ),
+      ]);
+
+      return { recipeSlug: existing.slug, username: ctx.userId };
+    }),
 });

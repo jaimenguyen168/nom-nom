@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,16 +22,60 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useImageUpload } from "@/hooks/use-image-upload";
-import { useCreateRecipe } from "@/hooks/trpcHooks/use-recipes";
+import { useGetRecipe, useUpdateRecipe } from "@/hooks/trpcHooks/use-recipes";
 import { createRecipeSchema } from "@/db/schemas/recipes";
 import { Switch } from "@/components/ui/switch";
 import AppTitle from "@/components/app-title";
 import { useGetCategories } from "@/hooks/trpcHooks/use-categories";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter as useNextRouter } from "next/navigation";
 
-const CreateRecipeView = () => {
+interface Props {
+  username: string;
+  recipeSlug: string;
+}
+
+export default function EditRecipeView({ username, recipeSlug }: Props) {
+  const { data } = useGetRecipe(username, recipeSlug);
+  const { userId } = useAuth();
   const router = useRouter();
-  const createRecipe = useCreateRecipe();
+
+  const isOwner = userId === data.recipes.userId;
+
+  useEffect(() => {
+    if (!isOwner) {
+      router.replace(`/recipes/${username}/${recipeSlug}`);
+    }
+  }, [isOwner, router, username, recipeSlug]);
+
+  if (!isOwner) return null;
+
+  return (
+    <EditRecipeForm data={data} username={username} recipeSlug={recipeSlug} />
+  );
+}
+
+function EditRecipeForm({
+  data,
+  username,
+  recipeSlug,
+}: {
+  data: ReturnType<typeof useGetRecipe>["data"];
+  username: string;
+  recipeSlug: string;
+}) {
+  const router = useNextRouter();
+  const { data: categories } = useGetCategories();
+
+  const recipe = data.recipes;
+  const ingredients = data.ingredients;
+  const instructions = data.instructions;
+  const nutrition = data.nutrition;
+  const tags = data.tags;
+  const updateRecipe = useUpdateRecipe(username, recipeSlug);
+
+  const path = `/recipes/${username}/${recipeSlug}`;
 
   const {
     isUploading,
@@ -46,9 +90,53 @@ const CreateRecipeView = () => {
     maxFileSize: 30 * 1024 * 1024,
   });
 
+  const [existingImageUrl, setExistingImageUrl] = useState(
+    recipe.imageUrl ?? "",
+  );
+
+  const prepHours = recipe.prepTimeMinutes
+    ? Math.floor(recipe.prepTimeMinutes / 60).toString()
+    : "0";
+  const prepMinutes = recipe.prepTimeMinutes
+    ? (recipe.prepTimeMinutes % 60).toString()
+    : "0";
+  const cookHours = recipe.cookTimeMinutes
+    ? Math.floor(recipe.cookTimeMinutes / 60).toString()
+    : "0";
+  const cookMinutes = recipe.cookTimeMinutes
+    ? (recipe.cookTimeMinutes % 60).toString()
+    : "0";
+
   const form = useForm<z.infer<typeof createRecipeSchema>>({
     resolver: zodResolver(createRecipeSchema),
-    defaultValues: recipeDefaultValues,
+    defaultValues: {
+      title: recipe.title,
+      description: recipe.description ?? "",
+      imageUrl: recipe.imageUrl ?? "",
+      servings: recipe.servings?.toString() ?? "",
+      cookingTime: { hours: cookHours, minutes: cookMinutes },
+      prepTime: { hours: prepHours, minutes: prepMinutes },
+      ingredients: ingredients.map((ing) => ({
+        name: ing.name,
+        amount: ing.amount ?? "",
+        unit: ing.unit ?? "",
+        isOptional: ing.isOptional ?? false,
+      })),
+      instructions: instructions
+        .sort((a, b) => a.stepNumber - b.stepNumber)
+        .map((inst) => ({
+          stepNumber: inst.stepNumber,
+          instruction: inst.instruction,
+        })),
+      nutrition: nutrition.map((n) => ({
+        nutrientName: n.nutrientName,
+        amount: n.amount,
+        unit: n.unit,
+      })),
+      tags: tags.map((t) => t.name),
+      isPublic: recipe.isPublic ?? false,
+      categoryIds: [],
+    },
   });
 
   const [tagInput, setTagInput] = useState("");
@@ -64,32 +152,27 @@ const CreateRecipeView = () => {
       name: "instructions",
     });
 
-  const { data: categories } = useGetCategories();
-
   const {
     fields: nutritionFields,
     append: appendNutrition,
     remove: removeNutrition,
-  } = useFieldArray({
-    control: form.control,
-    name: "nutrition",
-  });
+  } = useFieldArray({ control: form.control, name: "nutrition" });
 
-  const onSubmit = async (data: z.infer<typeof createRecipeSchema>) => {
+  const watchTags = useWatch({ control: form.control, name: "tags" });
+
+  const onSubmit = async (formData: z.infer<typeof createRecipeSchema>) => {
     try {
-      let imageUrl = "";
+      let imageUrl = existingImageUrl;
       if (hasFile) {
-        imageUrl = (await uploadFile()) || "";
+        imageUrl = (await uploadFile()) || existingImageUrl;
       }
 
-      await createRecipe.mutateAsync(
-        { ...data, imageUrl: imageUrl || undefined },
+      await updateRecipe.mutateAsync(
+        { recipeId: recipe.id, ...formData, imageUrl },
         {
-          onSuccess: (createdRecipe) => {
-            toast.success("Recipe created successfully");
-            router.push(
-              `/${createdRecipe.username}/${createdRecipe.recipeSlug}`,
-            );
+          onSuccess: () => {
+            toast.success("Recipe updated successfully");
+            router.push(path);
           },
           onError: (error) => {
             toast.error(error.message);
@@ -97,8 +180,8 @@ const CreateRecipeView = () => {
         },
       );
     } catch (error) {
-      console.error("Recipe creation error:", error);
-      toast.error("Failed to create recipe");
+      console.error("Recipe update error:", error);
+      toast.error("Failed to update recipe");
     }
   };
 
@@ -137,20 +220,18 @@ const CreateRecipeView = () => {
     );
   };
 
-  const isLoading = createRecipe.isPending || isUploading;
-
-  const tags = useWatch({ control: form.control, name: "tags" });
+  const isLoading = updateRecipe.isPending || isUploading;
+  const displayImageUrl = previewUrl || existingImageUrl;
 
   return (
     <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
       <div className="flex justify-between items-center pt-6 pb-16">
-        <AppTitle title="Create new recipe" className="mb-2" />
+        <AppTitle title="Edit recipe" className="mb-2" />
         <Button
-          variant="ghost"
-          className="text-transparent! bg-linear-to-r! from-purple-500! via-pink-500! to-orange-500! bg-clip-text! hover:from-purple-600! hover:via-pink-600! hover:to-orange-600! font-medium"
-          onClick={() => router.push("/recipes/new?agent=true")}
+          variant="outline"
+          onClick={() => router.push(path)}
         >
-          <span className="flex items-center gap-2 text-xl">Inspire me ✨</span>
+          Cancel
         </Button>
       </div>
 
@@ -179,20 +260,23 @@ const CreateRecipeView = () => {
             {/* Image */}
             <FormItem>
               <FormLabel>Recipe image</FormLabel>
-              {previewUrl ? (
+              {displayImageUrl ? (
                 <div className="relative w-full h-128 border rounded-lg overflow-hidden">
                   <Image
-                    src={previewUrl}
+                    src={displayImageUrl}
                     alt="Recipe preview"
                     width={1000}
                     height={1000}
-                    className="object-cover"
+                    className="object-cover w-full h-full"
                   />
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={removeFile}
+                    onClick={() => {
+                      removeFile();
+                      setExistingImageUrl("");
+                    }}
                     className="absolute size-8 top-3 right-3 rounded-full"
                   >
                     <X className="size-5" />
@@ -605,9 +689,9 @@ const CreateRecipeView = () => {
               <FormDescription className="text-xs">
                 Press Enter to add tags
               </FormDescription>
-              {tags && tags.length > 0 && (
+              {watchTags && watchTags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {tags.map((tag, index) => (
+                  {watchTags.map((tag, index) => (
                     <div
                       key={index}
                       className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
@@ -632,7 +716,6 @@ const CreateRecipeView = () => {
               name="categoryIds"
               render={({ field }) => {
                 const selected = field.value ?? [];
-
                 const toggleCategory = (id: string) => {
                   if (selected.includes(id)) {
                     field.onChange(selected.filter((c) => c !== id));
@@ -640,7 +723,6 @@ const CreateRecipeView = () => {
                     field.onChange([...selected, id]);
                   }
                 };
-
                 return (
                   <FormItem>
                     <FormLabel>Categories</FormLabel>
@@ -648,34 +730,28 @@ const CreateRecipeView = () => {
                       Select up to 3 categories
                     </FormDescription>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {isLoading ? (
-                        <span className="text-sm text-muted-foreground">
-                          Loading...
-                        </span>
-                      ) : (
-                        categories?.map((category) => {
-                          const isSelected = selected.includes(category.id);
-                          return (
-                            <button
-                              key={category.id}
-                              type="button"
-                              onClick={() => toggleCategory(category.id)}
-                              className={cn(
-                                "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
-                                isSelected
-                                  ? "bg-primary-200 text-white border-primary-200"
-                                  : "bg-white text-gray-600 border-gray-300 hover:border-primary-200",
-                                !isSelected &&
-                                  selected.length >= 3 &&
-                                  "opacity-50 cursor-not-allowed",
-                              )}
-                              disabled={!isSelected && selected.length >= 3}
-                            >
-                              {category.name}
-                            </button>
-                          );
-                        })
-                      )}
+                      {categories?.map((category) => {
+                        const isSelected = selected.includes(category.id);
+                        return (
+                          <button
+                            key={category.id}
+                            type="button"
+                            onClick={() => toggleCategory(category.id)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                              isSelected
+                                ? "bg-primary-200 text-white border-primary-200"
+                                : "bg-white text-gray-600 border-gray-300 hover:border-primary-200",
+                              !isSelected &&
+                                selected.length >= 3 &&
+                                "opacity-50 cursor-not-allowed",
+                            )}
+                            disabled={!isSelected && selected.length >= 3}
+                          >
+                            {category.name}
+                          </button>
+                        );
+                      })}
                     </div>
                     <FormMessage />
                   </FormItem>
@@ -719,33 +795,10 @@ const CreateRecipeView = () => {
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {isLoading ? "Creating..." : "Submit"}
+            {isLoading ? "Updating..." : "Update Recipe"}
           </Button>
         </div>
       </div>
     </div>
   );
-};
-
-export default CreateRecipeView;
-
-const recipeDefaultValues: z.infer<typeof createRecipeSchema> = {
-  title: "",
-  description: "",
-  imageUrl: "",
-  ingredients: [
-    { name: "", amount: "", unit: "", isOptional: false },
-    { name: "", amount: "", unit: "", isOptional: false },
-  ],
-  instructions: [
-    { stepNumber: 1, instruction: "" },
-    { stepNumber: 2, instruction: "" },
-  ],
-  nutrition: [{ nutrientName: "calories", amount: 0, unit: "kcal" }],
-  tags: [],
-  servings: "",
-  cookingTime: { hours: "", minutes: "" },
-  prepTime: { hours: "", minutes: "" },
-  isPublic: true,
-  categoryIds: [],
-};
+}
