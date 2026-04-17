@@ -55,7 +55,7 @@ const RecipeCard = ({ recipe }: RecipeCardProps) => {
   return (
     <Card
       onClick={handleNavigation}
-      className="rounded-xl py-0 shadow-md border overflow-hidden bg-white cursor-pointer"
+      className="rounded-xl py-0 shadow-md border overflow-hidden bg-white cursor-pointer hover:scale-105 transition-transform duration-300"
     >
       <div className="relative w-full h-48">
         <Image
