@@ -16,19 +16,20 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { useGetRecipes } from "@/hooks/trpcHooks/use-recipes";
+import { RecipeFeedType, useGetRecipes } from "@/hooks/trpcHooks/use-recipes";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 import RecipeCard from "@/features/recipes/components/recipe-card";
 import AppPagination from "@/components/app-pagination";
 import { PAGE_SIZE } from "@/features/recipes/constants";
-
-type RecipeFeedType = "trending" | "popular" | "new" | "a_z" | "relevance";
+import { useSearchParams } from "next/navigation";
 
 const RecipesView = () => {
   const { userId } = useAuth();
-  const [sortBy, setSortBy] = useState<RecipeFeedType>("new");
+  const searchParams = useSearchParams();
+  const initialSortBy = (searchParams.get("sortBy") as RecipeFeedType) ?? "new";
+  const [sortBy, setSortBy] = useState<RecipeFeedType>(initialSortBy);
   const [page, setPage] = useState(1);
 
   const { data } = useGetRecipes(sortBy, PAGE_SIZE, page);

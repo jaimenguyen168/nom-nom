@@ -6,6 +6,13 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 
+export type RecipeFeedType =
+  | "trending"
+  | "popular"
+  | "new"
+  | "a_z"
+  | "relevance";
+
 export const useCreateRecipe = () => {
   const trpc = useTRPC();
   return useMutation(trpc.recipes.create.mutationOptions());
@@ -66,7 +73,7 @@ export const useRecipeRecommendations = (recipeId: string) => {
 };
 
 export const useGetRecipes = (
-  sortBy: "trending" | "popular" | "new" | "a_z" | "relevance" = "new",
+  sortBy: RecipeFeedType = "new",
   limit = 12,
   page = 1,
 ) => {
@@ -85,7 +92,7 @@ export const useGetRecipesBySameCategories = (recipeId: string) => {
 
 export const useGetRecipesByCategory = (
   categorySlug: string,
-  sortBy: "trending" | "popular" | "new" | "a_z" | "relevance" = "new",
+  sortBy: RecipeFeedType = "new",
   pageSize = 12,
   page = 1,
 ) => {
