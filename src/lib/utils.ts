@@ -6,12 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const slugify = (text: string): string => {
-  return text
+  const base = text
     .toLowerCase()
     .trim()
     .replace(/[^\w\s-]/g, "")
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
+  const suffix = Date.now().toString().slice(-4);
+  return `${base}-${suffix}`;
 };
 
 export const formatDate = (timestamp: string): string => {

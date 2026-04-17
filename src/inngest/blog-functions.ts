@@ -1,10 +1,14 @@
 import { inngest } from "./client";
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { nomnomDb } from "@/db";
 import { blogs, blogTags, blogCategories } from "@/db/schemas/blogs";
 import { z } from "zod";
 import { slugify } from "@/lib/utils";
+import { createGroq } from "@ai-sdk/groq";
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 const aiBlogSchema = z.object({
   title: z.string(),
@@ -87,7 +91,7 @@ export const createBlogWithAgent = inngest.createFunction(
       console.log("=== BLOG STEP STARTING ===");
 
       const { text } = await generateText({
-        model: openai("gpt-4o"),
+        model: groq("llama-3.3-70b-versatile"),
         temperature: 0.7,
         messages: [
           {
@@ -168,7 +172,7 @@ async function saveBlogToDatabase(
   userId: string,
   availableCategories: { id: string; key: string; name: string }[],
 ) {
-  const slug = slugify(aiBlog.title) + "-" + Date.now();
+  const slug = slugify(aiBlog.title);
 
   const [createdBlog] = await nomnomDb
     .insert(blogs)

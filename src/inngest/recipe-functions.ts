@@ -1,6 +1,5 @@
 import { inngest } from "./client";
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { nomnomDb } from "@/db";
 import {
   recipes,
@@ -11,6 +10,12 @@ import {
   recipeCategories,
 } from "@/db/schemas/recipes";
 import { z } from "zod";
+import { createGroq } from "@ai-sdk/groq";
+import { slugify } from "@/lib/utils";
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 const aiRecipeSchema = z.object({
   title: z.string(),
@@ -157,7 +162,7 @@ export const createRecipeWithAgent = inngest.createFunction(
       "generate-and-parse-recipe",
       async () => {
         const { text } = await generateText({
-          model: openai("gpt-4o"),
+          model: groq("llama-3.3-70b-versatile"),
           temperature: 0.1,
           messages: [
             {
@@ -278,13 +283,7 @@ async function saveRecipeToDatabase(
     (parseInt(cookingTime.hours) || 0) * 60 +
     (parseInt(cookingTime.minutes) || 0);
 
-  const slug =
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") +
-    "-" +
-    Date.now();
+  const slug = slugify(title);
 
   const [createdRecipe] = await nomnomDb
     .insert(recipes)
