@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  allowedDevOrigins: ["whole-truly-yak.ngrok-free.app"],
   images: {
     remotePatterns: [
       {
