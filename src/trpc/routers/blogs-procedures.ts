@@ -371,4 +371,56 @@ export const blogsRouter = createTRPCRouter({
 
       return { username: user.username, blogSlug: existing.slug };
     }),
+
+  getManyByUser: authProcedure
+    .input(
+      z.object({
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+        status: z
+          .enum(["all", "published", "draft", "archived"])
+          .default("all"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { page, pageSize, status } = input;
+
+      const whereClause =
+        status === "all"
+          ? eq(blogs.authorId, ctx.userId)
+          : and(eq(blogs.authorId, ctx.userId), eq(blogs.status, status));
+
+      const data = await nomnomDb
+        .select({
+          id: blogs.id,
+          title: blogs.title,
+          slug: blogs.slug,
+          excerpt: blogs.excerpt,
+          featuredImage: blogs.featuredImage,
+          topic: blogs.topic,
+          status: blogs.status,
+          createdAt: blogs.createdAt,
+          authorId: blogs.authorId,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        })
+        .from(blogs)
+        .leftJoin(users, eq(blogs.authorId, users.id))
+        .where(whereClause)
+        .orderBy(desc(blogs.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(blogs)
+        .where(whereClause);
+
+      return {
+        items: data,
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
+    }),
 });

@@ -54,22 +54,6 @@ export async function POST(req: Request) {
     });
   }
 
-  if (eventType === "user.updated") {
-    await nomnomDb
-      .update(users)
-      .set({
-        email: data.email_addresses[0]?.email_address ?? "",
-        username:
-          data.username ??
-          data.email_addresses[0]?.email_address.split("@")[0] ??
-          data.id,
-        profileImageUrl: data.image_url,
-        firstName: data.first_name,
-        lastName: data.last_name,
-      })
-      .where(eq(users.id, data.id));
-  }
-
   if (eventType === "user.deleted") {
     if (data.id) {
       await nomnomDb.delete(users).where(eq(users.id, data.id));

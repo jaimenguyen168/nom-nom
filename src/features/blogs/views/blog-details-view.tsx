@@ -27,9 +27,14 @@ import BlogCategoryGrid from "@/features/blogs/components/blog-category-grid";
 interface Props {
   username: string;
   blogSlug: string;
+  fromMyBlogs?: boolean;
 }
 
-export default function BlogDetailsView({ username, blogSlug }: Props) {
+export default function BlogDetailsView({
+  username,
+  blogSlug,
+  fromMyBlogs,
+}: Props) {
   const { data } = useGetBlog(username, blogSlug);
   const { userId } = useAuth();
   const router = useRouter();
@@ -54,9 +59,23 @@ export default function BlogDetailsView({ username, blogSlug }: Props) {
             <BreadcrumbLink href="/">Home</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/blogs">Blogs</BreadcrumbLink>
-          </BreadcrumbItem>
+          {fromMyBlogs ? (
+            <>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/profile">Profile</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href={`/blogs/${username}`}>
+                  My Blogs
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+            </>
+          ) : (
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/blogs">Blogs</BreadcrumbLink>
+            </BreadcrumbItem>
+          )}
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>{blog.title}</BreadcrumbPage>
@@ -65,7 +84,7 @@ export default function BlogDetailsView({ username, blogSlug }: Props) {
       </Breadcrumb>
 
       {/* Meta */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
+      <div className="w-full flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 mt-8">
         <TitleInfoHeader
           type="blog"
           blogId={blog?.id as string}

@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 
 export type BlogSortType = "new" | "popular" | "a_z";
+export type BlogStatusFilter = "all" | "published" | "draft" | "archived";
 
 export const useCreateBlog = () => {
   const trpc = useTRPC();
@@ -95,5 +96,16 @@ export const useUpdateBlog = (username: string, slug: string) => {
         );
       },
     }),
+  );
+};
+
+export const useGetMyBlogs = (
+  status: BlogStatusFilter = "all",
+  pageSize = 12,
+  page = 1,
+) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.blogs.getManyByUser.queryOptions({ status, pageSize, page }),
   );
 };
