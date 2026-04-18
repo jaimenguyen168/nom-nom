@@ -1,9 +1,14 @@
+"use client"
+
 import React from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
 const ShareYourRecipe = () => {
+  const { data: user } = useGetCurrentUser();
+
   return (
     <section className="flex flex-col md:flex-row items-center justify-between gap-6 section-container">
       <div className="w-full min-w-sm max-w-sm aspect-square relative">
@@ -27,10 +32,10 @@ const ShareYourRecipe = () => {
         <p className="text-gray-600 px-4 md:px-0">
           Your favorite dishes deserve to be shared! Post your best recipes,
           discover new favorites, and connect with fellow food enthusiasts.
-          Whether it's a family tradition or your latest kitchen experiment –
+          Whether it&apos;s a family tradition or your latest kitchen experiment –
           cook, share, and inspire together.
         </p>
-        <Link href="/recipes/new/">
+        <Link href={`${user?.username}/recipes/new`}>
           <Button className="bg-primary-300 text-white p-6 hover:bg-primary-400 transition mt-4 font-semibold text-lg shadow-md shadow-white">
             Create New Recipe
           </Button>

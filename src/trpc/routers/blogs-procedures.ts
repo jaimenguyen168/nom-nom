@@ -60,6 +60,34 @@ export const blogsRouter = createTRPCRouter({
       return { username: user.username, blogSlug: blog.slug };
     }),
 
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const result = await nomnomDb
+        .select()
+        .from(blogs)
+        .innerJoin(users, eq(blogs.authorId, users.id))
+        .where(eq(blogs.slug, input.slug))
+        .then((rows) => rows[0]);
+
+      if (!result) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Blog not found" });
+      }
+
+      const isOwner = ctx.userId === result.blogs.authorId;
+
+      if (result.blogs.status !== "published" && !isOwner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Blog not found" });
+      }
+
+      const tags = await nomnomDb
+        .select()
+        .from(blogTags)
+        .where(eq(blogTags.blogId, result.blogs.id));
+
+      return { ...result, tags };
+    }),
+
   getByUsernameAndSlug: publicProcedure
     .input(z.object({ username: z.string(), slug: z.string() }))
     .query(async ({ ctx, input }) => {

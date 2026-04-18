@@ -5,20 +5,19 @@ import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 export default async function RecipeDetailsPage({
   params,
 }: {
-  params: Promise<{ username: string; recipeSlug: string }>;
+  params: Promise<{ recipeSlug: string }>;
 }) {
-  const { username, recipeSlug } = await params;
+  const { recipeSlug } = await params;
 
   prefetch(
-    trpc.recipes.getByUsernameAndSlug.queryOptions({
-      username,
+    trpc.recipes.getBySlug.queryOptions({
       slug: recipeSlug,
     }),
   );
 
   return (
     <HydrateClient>
-      <RecipeDetailsView username={username} recipeSlug={recipeSlug} />
+      <RecipeDetailsView recipeSlug={recipeSlug} />
     </HydrateClient>
   );
 }

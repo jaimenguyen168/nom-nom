@@ -6,14 +6,9 @@ import { JSX } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { useGetBlog, useGetRelatedRecipeId } from "@/hooks/trpcHooks/use-blogs";
+  useGetBlogBySlug,
+  useGetRelatedRecipeId,
+} from "@/hooks/trpcHooks/use-blogs";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import TagsSection from "@/components/tags-section";
@@ -25,17 +20,12 @@ import RecipeRecommendationGrid from "@/features/recipes/components/recipe-recom
 import BlogCategoryGrid from "@/features/blogs/components/blog-category-grid";
 
 interface Props {
-  username: string;
   blogSlug: string;
   fromMyBlogs?: boolean;
 }
 
-export default function BlogDetailsView({
-  username,
-  blogSlug,
-  fromMyBlogs,
-}: Props) {
-  const { data } = useGetBlog(username, blogSlug);
+export default function BlogDetailsView({ blogSlug }: Props) {
+  const { data } = useGetBlogBySlug(blogSlug);
   const { userId } = useAuth();
   const router = useRouter();
 
@@ -43,55 +33,21 @@ export default function BlogDetailsView({
   const user = data.users;
   const tags = data.tags;
 
-  const { data: relatedRecipe } = useGetRelatedRecipeId(blog.id);
-
   const handleGoToAuthor = () => {
     const path = userId === blog.authorId ? "/profile" : `/${user.username}`;
     router.push(path);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      {/* Breadcrumb */}
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/">Home</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          {fromMyBlogs ? (
-            <>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/profile">Profile</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href={`/blogs/${username}`}>
-                  My Blogs
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </>
-          ) : (
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/blogs">Blogs</BreadcrumbLink>
-            </BreadcrumbItem>
-          )}
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{blog.title}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      {/* Meta */}
+    <div>
       <div className="w-full flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 mt-8">
         <TitleInfoHeader
           type="blog"
-          blogId={blog?.id as string}
-          title={blog?.title}
-          authorId={blog?.authorId as string}
-          authorName={user?.username as string}
-          authorProfileImageUrl={user?.profileImageUrl as string}
+          blogId={blog.id}
+          title={blog.title}
+          authorId={blog.authorId as string}
+          authorName={user.username as string}
+          authorProfileImageUrl={user.profileImageUrl as string}
           date={blog.createdAt?.toISOString() ?? ""}
           commentsCount={0}
           rating={0}
@@ -100,8 +56,8 @@ export default function BlogDetailsView({
         <div className="mb-2 sm:mt-2 shrink-0">
           <CallToAction
             type="blog"
-            blogId={blog?.id}
-            username={username}
+            blogId={blog.id}
+            username={user.username as string}
             slug={blogSlug}
             authorId={user.id}
           />
@@ -109,9 +65,7 @@ export default function BlogDetailsView({
       </div>
 
       <div className="flex flex-col lg:flex-row gap-12">
-        {/* Left Column */}
         <div className="flex-1 lg:w-2/3">
-          {/* Featured Image */}
           {blog.featuredImage && (
             <div className="mb-8">
               <Image
@@ -124,22 +78,19 @@ export default function BlogDetailsView({
             </div>
           )}
 
-          {/* Category Tag */}
           <div className="mb-6">
             <Badge
               variant="outline"
               className="px-6 py-1.5 text-sm rounded-full"
             >
-              {blog?.topic}
+              {blog.topic}
             </Badge>
           </div>
 
-          {/* Content */}
           <BlogContentRenderer
             contentBlocks={(blog.contentBlocks as ContentBlock[]) ?? []}
           />
 
-          {/* Comments */}
           <CommentsSection
             comments={[]}
             onLike={(id) => console.log("Liked:", id)}
@@ -149,17 +100,11 @@ export default function BlogDetailsView({
             }
           />
 
-          {relatedRecipe?.recipeId && (
-            <RecipeRecommendationGrid
-              recipeId={relatedRecipe.recipeId}
-              title="Related Recipes"
-            />
-          )}
+          {/* isolate the lazy query so it doesn't cause parent flash */}
+          <RelatedRecipes blogId={blog.id} />
         </div>
 
-        {/* Right Sidebar */}
         <div className="lg:w-1/3 space-y-8">
-          {/* Author Card */}
           <div className="border rounded-lg p-6 text-center">
             <Avatar className="w-24 h-24 mx-auto mb-4">
               <AvatarImage
@@ -183,12 +128,23 @@ export default function BlogDetailsView({
           </div>
 
           <BlogCategoryGrid blogId={blog.id} />
-
-          {/* Tags */}
           <TagsSection tags={tags} />
         </div>
       </div>
     </div>
+  );
+}
+
+function RelatedRecipes({ blogId }: { blogId: string }) {
+  const { data: relatedRecipe } = useGetRelatedRecipeId(blogId);
+
+  if (!relatedRecipe?.recipeId) return null;
+
+  return (
+    <RecipeRecommendationGrid
+      recipeId={relatedRecipe.recipeId}
+      title="Related Recipes"
+    />
   );
 }
 

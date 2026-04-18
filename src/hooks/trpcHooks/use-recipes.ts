@@ -18,6 +18,15 @@ export const useCreateRecipe = () => {
   return useMutation(trpc.recipes.create.mutationOptions());
 };
 
+export const useGetRecipeBySlug = (slug: string) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery({
+    ...trpc.recipes.getBySlug.queryOptions({ slug }),
+    staleTime: 60 * 1000 * 30,
+    retry: false,
+  });
+};
+
 export const useGetRecipe = (username: string, slug: string) => {
   const trpc = useTRPC();
   return useSuspenseQuery({

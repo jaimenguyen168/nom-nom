@@ -14,6 +14,15 @@ export const useCreateBlog = () => {
   return useMutation(trpc.blogs.create.mutationOptions());
 };
 
+export const useGetBlogBySlug = (slug: string) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery({
+    ...trpc.blogs.getBySlug.queryOptions({ slug }),
+    retry: false,
+    staleTime: 60 * 1000 * 30, // 30 minute
+  });
+};
+
 export const useGetBlog = (username: string, slug: string) => {
   const trpc = useTRPC();
   return useSuspenseQuery({

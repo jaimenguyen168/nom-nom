@@ -181,6 +181,50 @@ export const recipesRouter = createTRPCRouter({
       };
     }),
 
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const result = await nomnomDb
+        .select()
+        .from(recipes)
+        .innerJoin(users, eq(recipes.userId, users.id))
+        .where(eq(recipes.slug, input.slug))
+        .then((rows) => rows[0]);
+
+      if (!result) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+      }
+
+      const isOwner = ctx.userId === result.recipes.userId;
+
+      if (!result.recipes.isPublic && !isOwner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+      }
+
+      const recipeId = result.recipes.id;
+
+      const [ingredients, instructions, nutrition, tags] = await Promise.all([
+        nomnomDb
+          .select()
+          .from(recipeIngredients)
+          .where(eq(recipeIngredients.recipeId, recipeId)),
+        nomnomDb
+          .select()
+          .from(recipeInstructions)
+          .where(eq(recipeInstructions.recipeId, recipeId)),
+        nomnomDb
+          .select()
+          .from(recipeNutrition)
+          .where(eq(recipeNutrition.recipeId, recipeId)),
+        nomnomDb
+          .select()
+          .from(recipeTags)
+          .where(eq(recipeTags.recipeId, recipeId)),
+      ]);
+
+      return { ...result, ingredients, instructions, nutrition, tags };
+    }),
+
   getByUsernameAndSlug: publicProcedure
     .input(
       z.object({

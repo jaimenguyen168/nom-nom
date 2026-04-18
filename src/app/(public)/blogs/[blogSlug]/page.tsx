@@ -5,17 +5,15 @@ import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 export default async function BlogDetailsPage({
   params,
 }: {
-  params: Promise<{ username: string; blogSlug: string }>;
+  params: Promise<{ blogSlug: string }>;
 }) {
-  const { username, blogSlug } = await params;
+  const { blogSlug } = await params;
 
-  prefetch(
-    trpc.blogs.getByUsernameAndSlug.queryOptions({ username, slug: blogSlug }),
-  );
+  prefetch(trpc.blogs.getBySlug.queryOptions({ slug: blogSlug }));
 
   return (
     <HydrateClient>
-      <BlogDetailsView username={username} blogSlug={blogSlug} />
+      <BlogDetailsView blogSlug={blogSlug} />
     </HydrateClient>
   );
 }
