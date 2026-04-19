@@ -1,7 +1,7 @@
-import { authProcedure, createTRPCRouter } from "@/trpc/init";
+import { authProcedure, createTRPCRouter, publicProcedure } from "@/trpc/init";
 import { z } from "zod";
 import { nomnomDb } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { users } from "@/db/schemas/users";
 import { TRPCError } from "@trpc/server";
 
@@ -36,5 +36,23 @@ export const usersRouter = createTRPCRouter({
         .where(eq(users.id, ctx.userId));
 
       return { success: true };
+    }),
+
+  search: publicProcedure
+    .input(z.object({ query: z.string().min(1) }))
+    .query(async ({ input }) => {
+      return nomnomDb
+        .select({
+          id: users.id,
+          username: users.username,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        })
+        .from(users)
+        .where(
+          sql`LOWER(${users.username}) LIKE LOWER(${"%" + input.query + "%"})`,
+        )
+        .limit(5);
     }),
 });

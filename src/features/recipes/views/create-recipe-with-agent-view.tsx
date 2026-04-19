@@ -10,7 +10,11 @@ import AppTitle from "@/components/app-title";
 import { EXAMPLE_PROMPTS } from "@/features/recipes/constants";
 import { useCreateRecipeWithAgent } from "@/hooks/trpcHooks/use-recipes-agent";
 
-export default function CreateRecipeWithAgentView() {
+export default function CreateRecipeWithAgentView({
+  username,
+}: {
+  username: string;
+}) {
   const [prompt, setPrompt] = useState("");
   const router = useRouter();
   const createRecipe = useCreateRecipeWithAgent();
@@ -41,13 +45,13 @@ export default function CreateRecipeWithAgentView() {
   const isLoading = createRecipe.isPending;
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      <div className="flex justify-between items-center pt-6 pb-16">
+    <div>
+      <div className="flex justify-between items-center pb-16">
         <AppTitle title="Get inspired to cook" />
         <Button
           variant="outline"
           className="border-none text-primary-200 hover:bg-primary-100 hover:text-primary-200/80 transition-colors font-medium text-lg"
-          onClick={() => router.push("/recipes/new")}
+          onClick={() => router.push(`/${username}/recipes/new`)}
         >
           Create Manually
         </Button>

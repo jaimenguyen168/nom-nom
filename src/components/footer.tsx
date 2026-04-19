@@ -6,8 +6,18 @@ import { Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AppLogo from "@/components/app-logo";
+import { useAuth } from "@clerk/nextjs";
+import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
 const Footer = () => {
+  const { isSignedIn } = useAuth();
+  const { data: currentUser } = useGetCurrentUser();
+
+  const href =
+    isSignedIn && currentUser
+      ? `/${currentUser.username}/recipes/new`
+      : "/sign-in";
+
   return (
     <footer className="bg-gray-100 text-gray-700 px-8 md:px-12 py-10">
       <div className="max-w-7xl mx-auto">
@@ -53,27 +63,27 @@ const Footer = () => {
             <h3 className="font-semibold text-gray-800 mb-3">Create</h3>
             <ul className="space-y-1.5 text-gray-600">
               <li>
-                <Link href="/recipes/new" className="hover:text-primary-200">
+                <Link href={`/${currentUser?.username}/recipes/new`} className="hover:text-primary-200">
                   New Recipe
                 </Link>
               </li>
               <li>
-                <Link href="/blogs/new" className="hover:text-primary-200">
+                <Link href={`/${currentUser?.username}/blogs/new`} className="hover:text-primary-200">
                   New Blog
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/recipes/new?agent=true"
-                  className="text-transparent bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text font-medium"
+                  href={`/${currentUser?.username}/recipes/new?agent=true`}
+                  className="text-transparent bg-linear-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text font-medium"
                 >
                   Inspire Recipe ✨
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/blogs/new?agent=true"
-                  className="text-transparent bg-gradient-to-r from-blue-500 via-teal-500 to-green-500 bg-clip-text font-medium"
+                  href={`/${currentUser?.username}/blogs/new?agent=true`}
+                  className="text-transparent bg-linear-to-r from-blue-500 via-teal-500 to-green-500 bg-clip-text font-medium"
                 >
                   Inspire Blog ✨
                 </Link>

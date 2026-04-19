@@ -1,19 +1,19 @@
-import { createTRPCRouter, authProcedure, publicProcedure } from "@/trpc/init";
+import { authProcedure, createTRPCRouter, publicProcedure } from "@/trpc/init";
 import {
-  recipes,
   createRecipeSchema,
-  userSavedRecipes,
+  recipeCategories,
   recipeIngredients,
   recipeInstructions,
   recipeNutrition,
-  recipeTags,
   recipeReviews,
-  recipeCategories,
+  recipes,
+  recipeTags,
+  userSavedRecipes,
 } from "@/db/schemas/recipes";
 import { nomnomDb } from "@/db";
 import { slugify } from "@/lib/utils";
 import { users } from "@/db/schemas/users";
-import { eq, and, ne, inArray, avg, desc, asc, sql, count } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { categories } from "@/db/schemas/categories";
@@ -756,5 +756,34 @@ export const recipesRouter = createTRPCRouter({
         totalPages: Math.ceil(totalResult.count / pageSize),
         hasMore: page < Math.ceil(totalResult.count / pageSize),
       };
+    }),
+
+  search: publicProcedure
+    .input(z.object({ query: z.string().min(1) }))
+    .query(async ({ input }) => {
+      return nomnomDb
+        .select({
+          id: recipes.id,
+          title: recipes.title,
+          slug: recipes.slug,
+          imageUrl: recipes.imageUrl,
+          username: users.username,
+        })
+        .from(recipes)
+        .leftJoin(users, eq(recipes.userId, users.id))
+        .where(
+          and(
+            eq(recipes.isPublic, true),
+            sql`LOWER(
+            ${recipes.title}
+            )
+            LIKE
+            LOWER
+            (
+            ${"%" + input.query + "%"}
+            )`,
+          ),
+        )
+        .limit(5);
     }),
 });

@@ -29,7 +29,7 @@ import AppTitle from "@/components/app-title";
 import { useGetCategories } from "@/hooks/trpcHooks/use-categories";
 import { cn } from "@/lib/utils";
 
-const CreateRecipeView = () => {
+const CreateRecipeView = ({ username }: { username: string }) => {
   const router = useRouter();
   const createRecipe = useCreateRecipe();
 
@@ -142,13 +142,13 @@ const CreateRecipeView = () => {
   const tags = useWatch({ control: form.control, name: "tags" });
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      <div className="flex justify-between items-center pt-6 pb-16">
+    <div>
+      <div className="flex justify-between items-center pb-16">
         <AppTitle title="Create new recipe" className="mb-2" />
         <Button
           variant="ghost"
           className="text-transparent! bg-linear-to-r! from-purple-500! via-pink-500! to-orange-500! bg-clip-text! hover:from-purple-600! hover:via-pink-600! hover:to-orange-600! font-medium"
-          onClick={() => router.push("/recipes/new?agent=true")}
+          onClick={() => router.push(`/${username}/recipes/new?agent=true`)}
         >
           <span className="flex items-center gap-2 text-xl">Inspire me ✨</span>
         </Button>
