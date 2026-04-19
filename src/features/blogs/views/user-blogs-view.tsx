@@ -1,14 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { BlogStatusFilter, useGetMyBlogs } from "@/hooks/trpcHooks/use-blogs";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
@@ -36,12 +28,12 @@ const UserBlogsView = ({ username }: { username: string }) => {
   const blogs = data?.items ?? [];
 
   useEffect(() => {
-    if (currentUser.username !== username) {
+    if (currentUser?.username !== username) {
       router.replace("/blogs");
     }
-  }, [currentUser.username, username, router]);
+  }, [currentUser?.username, username, router]);
 
-  if (currentUser.username !== username) return null;
+  if (currentUser?.username !== username) return null;
 
   const handleStatusChange = (value: BlogStatusFilter) => {
     setStatus(value);
@@ -49,23 +41,7 @@ const UserBlogsView = ({ username }: { username: string }) => {
   };
 
   return (
-    <div className="pb-16 max-w-7xl mx-auto px-8 md:px-12 space-y-8 pt-8">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/">Home</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/profile">Profile</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>My Blogs</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
+    <div className="space-y-8 pb-16">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold">My Blogs</h1>

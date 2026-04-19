@@ -21,13 +21,14 @@ interface BlogCardProps {
     authorId: string;
   };
   size?: "large" | "medium";
+  href: string;
 }
 
-const BlogCard = ({ blog, size = "medium" }: BlogCardProps) => {
+const BlogCard = ({ blog, size = "medium", href }: BlogCardProps) => {
   const router = useRouter();
 
   const handleNavigation = () => {
-    router.push(`/blogs/${blog.slug}`);
+    router.push(href ?? `/blogs/${blog.slug}`);
   };
 
   const handleGoToAuthor = (e: React.MouseEvent) => {

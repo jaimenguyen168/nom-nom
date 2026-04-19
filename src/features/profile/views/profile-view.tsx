@@ -67,6 +67,8 @@ export default function ProfileView() {
   const { user: clerkUser } = useUser();
   const isOAuthUser = (clerkUser?.externalAccounts?.length ?? 0) > 0;
 
+  if (!currentUser) return null;
+
   const {
     isUploading,
     previewUrl,
@@ -371,13 +373,13 @@ export default function ProfileView() {
             icon={Bookmark}
           />
           <ActivityCard
-            href={`/blogs/${currentUser.username}`}
+            href={`/${currentUser.username}/blogs`}
             title="My Blogs"
             description="Blogs you created"
             icon={BookOpen}
           />
           <ActivityCard
-            href="/blogs?filter=saved"
+            href={`/${currentUser.username}/blogs/saved`}
             title="Saved Blogs"
             description="Blogs you saved"
             icon={Heart}

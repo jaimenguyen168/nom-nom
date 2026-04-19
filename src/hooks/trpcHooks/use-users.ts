@@ -1,13 +1,20 @@
 import { useTRPC } from "@/trpc/client";
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
 
 export const useGetCurrentUser = () => {
   const trpc = useTRPC();
-  return useSuspenseQuery(trpc.users.getCurrentUser.queryOptions());
+  const { isSignedIn } = useAuth();
+
+  return useQuery({
+    ...trpc.users.getCurrentUser.queryOptions(),
+    enabled: !!isSignedIn,
+  });
 };
 
 export const useUpdateProfile = () => {

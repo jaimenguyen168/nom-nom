@@ -73,7 +73,9 @@ const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
 
   const handleGoToAuthor = () => {
     const targetUrl =
-      user?.id === props.authorId ? "/profile" : `/${props.authorName}`;
+      user?.id === props.authorId
+        ? `/${props.authorName}/profile`
+        : `/${props.authorName}`;
     router.push(targetUrl);
   };
 

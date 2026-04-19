@@ -48,8 +48,8 @@ export default function CreateBlogWithAgentView() {
   const isLoading = createBlog.isPending;
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      <div className="flex justify-between items-center pt-6 pb-16">
+    <div>
+      <div className="flex justify-between items-center pb-16">
         <AppTitle title="Get inspired to write" />
         <Button
           variant="outline"

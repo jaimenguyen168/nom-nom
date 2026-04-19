@@ -451,4 +451,60 @@ export const blogsRouter = createTRPCRouter({
         hasMore: page < Math.ceil(totalResult.count / pageSize),
       };
     }),
+
+  getSavedByUser: authProcedure
+    .input(
+      z.object({
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { page, pageSize } = input;
+
+      const data = await nomnomDb
+        .select({
+          id: blogs.id,
+          title: blogs.title,
+          slug: blogs.slug,
+          excerpt: blogs.excerpt,
+          featuredImage: blogs.featuredImage,
+          topic: blogs.topic,
+          status: blogs.status,
+          createdAt: blogs.createdAt,
+          authorId: blogs.authorId,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        })
+        .from(userSavedBlogs)
+        .innerJoin(blogs, eq(blogs.id, userSavedBlogs.blogId))
+        .leftJoin(users, eq(blogs.authorId, users.id))
+        .where(
+          and(
+            eq(userSavedBlogs.userId, ctx.userId),
+            eq(blogs.status, "published"),
+          ),
+        )
+        .orderBy(desc(userSavedBlogs.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(userSavedBlogs)
+        .innerJoin(blogs, eq(blogs.id, userSavedBlogs.blogId))
+        .where(
+          and(
+            eq(userSavedBlogs.userId, ctx.userId),
+            eq(blogs.status, "published"),
+          ),
+        );
+
+      return {
+        items: data,
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
+    }),
 });

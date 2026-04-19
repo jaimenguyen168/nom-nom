@@ -9,18 +9,31 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { formatSlugToTitle } from "@/lib/utils";
 
-export const ClientBlogsLayout = () => {
+interface ClientBlogsLayoutProps {
+  isPrivate?: boolean;
+}
+
+export const ClientBlogsLayout = ({ isPrivate }: ClientBlogsLayoutProps) => {
   const params = useParams();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const blogSlug = params?.blogSlug as string | undefined;
+  const username = params?.username as string | undefined;
+  const blogSlugParam = params?.blogSlug as string | undefined;
+  const blogSlugQuery = searchParams.get("blogSlug") ?? undefined;
+  const blogSlug = blogSlugParam || blogSlugQuery;
+
   const isEdit = pathname.endsWith("/edit");
+  const isNew = pathname.endsWith("/new");
+  const isSaved = pathname.endsWith("/saved");
 
   const formattedSlug = blogSlug ? formatSlugToTitle(blogSlug) : null;
+
+  if (isEdit || isNew) return null;
 
   return (
     <Breadcrumb className="mb-6">
@@ -31,36 +44,83 @@ export const ClientBlogsLayout = () => {
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/blogs">Blogs</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
 
-        {formattedSlug && (
+        {isPrivate ? (
           <>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/${username}/profile`}>Profile</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
             <BreadcrumbSeparator />
-            {isEdit ? (
+
+            {isSaved ? (
               <>
                 <BreadcrumbItem>
-                  <BreadcrumbLink
-                    href={`/blogs/${blogSlug}`}
-                    className="capitalize"
-                  >
-                    {formattedSlug}
-                  </BreadcrumbLink>
+                  {formattedSlug ? (
+                    <BreadcrumbLink asChild>
+                      <Link href={`/${username}/blogs/saved`}>Saved Blogs</Link>
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>Saved Blogs</BreadcrumbPage>
+                  )}
                 </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Edit</BreadcrumbPage>
-                </BreadcrumbItem>
+                {formattedSlug && (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="capitalize">
+                        {formattedSlug}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                )}
               </>
             ) : (
-              <BreadcrumbItem>
-                <BreadcrumbPage className="capitalize">
-                  {formattedSlug}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
+              <>
+                <BreadcrumbItem>
+                  {formattedSlug ? (
+                    <BreadcrumbLink asChild>
+                      <Link href={`/${username}/blogs`}>My Blogs</Link>
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>My Blogs</BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {formattedSlug && (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="capitalize">
+                        {formattedSlug}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                )}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <BreadcrumbItem>
+              {formattedSlug ? (
+                <BreadcrumbLink asChild>
+                  <Link href="/blogs">Blogs</Link>
+                </BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage>Blogs</BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+
+            {formattedSlug && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="capitalize">
+                    {formattedSlug}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
             )}
           </>
         )}

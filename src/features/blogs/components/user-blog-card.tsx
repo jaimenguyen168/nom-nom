@@ -42,12 +42,12 @@ const UserBlogCard = ({ blog }: UserBlogCardProps) => {
     : "";
 
   const handleView = () => {
-    router.push(`/blogs/${blog.username}?blogSlug=${blog.slug}`);
+    router.push(`/${blog.username}/blogs?blogSlug=${blog.slug}`);
   };
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/blogs/${blog.username}/${blog.slug}/edit`);
+    router.push(`/${blog.username}/blogs/${blog.slug}/edit`);
   };
 
   return (

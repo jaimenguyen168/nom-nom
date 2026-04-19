@@ -1,8 +1,8 @@
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
-import UserBlogsView from "@/features/blogs/views/user-blogs-view";
+import SavedBlogsView from "@/features/blogs/views/saved-blogs-view";
 import BlogDetailsView from "@/features/blogs/views/blog-details-view";
 
-export default async function UserBlogsPage({
+export default async function SavedBlogsPage({
   params,
   searchParams,
 }: {
@@ -13,24 +13,20 @@ export default async function UserBlogsPage({
   const { blogSlug } = await searchParams;
 
   if (blogSlug) {
-    prefetch(
-      trpc.blogs.getBySlug.queryOptions({
-        slug: blogSlug,
-      }),
-    );
+    prefetch(trpc.blogs.getBySlug.queryOptions({ slug: blogSlug }));
 
     return (
       <HydrateClient>
-        <BlogDetailsView blogSlug={blogSlug} fromMyBlogs />
+        <BlogDetailsView blogSlug={blogSlug} />
       </HydrateClient>
     );
   }
 
-  prefetch(trpc.blogs.getManyByUser.queryOptions({}));
+  prefetch(trpc.blogs.getSavedByUser.queryOptions({}));
 
   return (
     <HydrateClient>
-      <UserBlogsView username={username} />
+      <SavedBlogsView username={username} />
     </HydrateClient>
   );
 }

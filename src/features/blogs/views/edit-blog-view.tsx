@@ -282,8 +282,8 @@ function EditBlogForm({
   const displayImageUrl = previewUrl || existingImageUrl;
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      <div className="flex justify-between items-center pt-6 pb-16">
+    <div>
+      <div className="flex justify-between items-center pb-12">
         <AppTitle title="Edit blog post" />
         <Button variant="outline" onClick={() => router.back()}>
           Cancel
@@ -294,7 +294,7 @@ function EditBlogForm({
         <form
           id="blog-form"
           onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-8"
+          className="space-y-8 max-w-5xl mx-auto"
         >
           {/* Title */}
           <FormField

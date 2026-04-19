@@ -55,7 +55,8 @@ const RecipeCard = ({ recipe, categoryContext }: RecipeCardProps) => {
 
   const handleGoToAuthor = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const path = userId === recipe.userId ? "/profile" : `/${username}`;
+    const path =
+      userId === recipe.userId ? `/${username}/profile` : `/${username}`;
     router.push(path);
   };
 

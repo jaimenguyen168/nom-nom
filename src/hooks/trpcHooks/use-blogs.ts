@@ -118,3 +118,10 @@ export const useGetMyBlogs = (
     trpc.blogs.getManyByUser.queryOptions({ status, pageSize, page }),
   );
 };
+
+export const useGetSavedBlogs = (pageSize = 12, page = 1) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.blogs.getSavedByUser.queryOptions({ pageSize, page }),
+  );
+};
