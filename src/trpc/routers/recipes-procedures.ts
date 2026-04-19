@@ -2,6 +2,7 @@ import { authProcedure, createTRPCRouter, publicProcedure } from "@/trpc/init";
 import {
   createRecipeSchema,
   recipeCategories,
+  recipeComments,
   recipeIngredients,
   recipeInstructions,
   recipeNutrition,
@@ -17,6 +18,40 @@ import { and, asc, avg, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { categories } from "@/db/schemas/categories";
+
+// SQL expressions for sorting
+const trendingScore = sql`(
+  COUNT(DISTINCT ${userSavedRecipes.id}) * 3 +
+  COUNT(DISTINCT ${recipeReviews.id}) * 2 +
+  COUNT(DISTINCT ${recipeComments.id}) * 1 +
+  COALESCE(${avg(recipeReviews.rating)}, 0) * 1.5
+) / POWER(
+  EXTRACT(EPOCH FROM (NOW() - ${recipes.createdAt})) / 3600 + 2,
+  1.5
+)`;
+
+const relevanceScore = sql`(
+  COALESCE(${avg(recipeReviews.rating)}, 0) * 0.4 +
+  COUNT(DISTINCT ${userSavedRecipes.id}) * 0.4 +
+  EXTRACT(EPOCH FROM ${recipes.createdAt}) / 1000000000 * 0.2
+)`;
+
+type SortBy = "trending" | "popular" | "new" | "a_z" | "relevance";
+
+function getOrderBy(sortBy: SortBy) {
+  switch (sortBy) {
+    case "a_z":
+      return asc(recipes.title);
+    case "popular":
+      return desc(count(userSavedRecipes.id));
+    case "trending":
+      return desc(trendingScore);
+    case "relevance":
+      return desc(relevanceScore);
+    default:
+      return desc(recipes.createdAt);
+  }
+}
 
 export const recipesRouter = createTRPCRouter({
   create: authProcedure
@@ -118,22 +153,7 @@ export const recipesRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const { page, pageSize, sortBy } = input;
 
-      const orderBy =
-        sortBy === "a_z"
-          ? asc(recipes.title)
-          : sortBy === "popular"
-            ? desc(count(userSavedRecipes.id))
-            : sortBy === "trending"
-              ? desc(count(recipeTags.id))
-              : sortBy === "relevance"
-                ? desc(
-                    sql`(
-                      COALESCE(${avg(recipeReviews.rating)}, 0) * 0.4 +
-                      COUNT(DISTINCT ${userSavedRecipes.id}) * 0.4 +
-                      EXTRACT(EPOCH FROM ${recipes.createdAt}) / 1000000000 * 0.2
-                    )`,
-                  )
-                : desc(recipes.createdAt);
+      const orderBy = getOrderBy(sortBy);
 
       const data = await nomnomDb
         .select({
@@ -157,6 +177,7 @@ export const recipesRouter = createTRPCRouter({
         .leftJoin(recipeNutrition, eq(recipeNutrition.recipeId, recipes.id))
         .leftJoin(users, eq(recipes.userId, users.id))
         .leftJoin(userSavedRecipes, eq(userSavedRecipes.recipeId, recipes.id))
+        .leftJoin(recipeComments, eq(recipeComments.recipeId, recipes.id))
         .leftJoin(recipeTags, eq(recipeTags.recipeId, recipes.id))
         .where(eq(recipes.isPublic, true))
         .groupBy(recipes.id, users.username, users.profileImageUrl)
@@ -454,22 +475,7 @@ export const recipesRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const { page, pageSize, sortBy, categorySlug } = input;
 
-      const orderBy =
-        sortBy === "a_z"
-          ? asc(recipes.title)
-          : sortBy === "popular"
-            ? desc(count(userSavedRecipes.id))
-            : sortBy === "trending"
-              ? desc(count(recipeTags.id))
-              : sortBy === "relevance"
-                ? desc(
-                    sql`(
-                      COALESCE(${avg(recipeReviews.rating)}, 0) * 0.4 +
-                      COUNT(DISTINCT ${userSavedRecipes.id}) * 0.4 +
-                      EXTRACT(EPOCH FROM ${recipes.createdAt}) / 1000000000 * 0.2
-                    )`,
-                  )
-                : desc(recipes.createdAt);
+      const orderBy = getOrderBy(sortBy);
 
       const data = await nomnomDb
         .select({
@@ -761,6 +767,7 @@ export const recipesRouter = createTRPCRouter({
   search: publicProcedure
     .input(z.object({ query: z.string().min(1) }))
     .query(async ({ input }) => {
+      const q = input.query.trim();
       return nomnomDb
         .select({
           id: recipes.id,
@@ -774,16 +781,13 @@ export const recipesRouter = createTRPCRouter({
         .where(
           and(
             eq(recipes.isPublic, true),
-            sql`LOWER(
-            ${recipes.title}
-            )
-            LIKE
-            LOWER
-            (
-            ${"%" + input.query + "%"}
-            )`,
+            sql`(
+                  similarity(title, ${q}) > 0.1
+                  OR LOWER(title) LIKE LOWER(${"%" + q + "%"})
+                )`,
           ),
         )
+        .orderBy(sql`similarity(title, ${q}) DESC`)
         .limit(5);
     }),
 });

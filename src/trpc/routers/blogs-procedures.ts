@@ -511,6 +511,7 @@ export const blogsRouter = createTRPCRouter({
   search: publicProcedure
     .input(z.object({ query: z.string().min(1) }))
     .query(async ({ input }) => {
+      const q = input.query.trim();
       return nomnomDb
         .select({
           id: blogs.id,
@@ -524,16 +525,13 @@ export const blogsRouter = createTRPCRouter({
         .where(
           and(
             eq(blogs.status, "published"),
-            sql`LOWER(
-            ${blogs.title}
-            )
-            LIKE
-            LOWER
-            (
-            ${"%" + input.query + "%"}
-            )`,
+            sql`(
+                  word_similarity(${q}, title) > 0.5
+                  OR LOWER(title) LIKE LOWER(${"%" + q + "%"})
+                )`,
           ),
         )
+        .orderBy(sql`word_similarity(${q}, title) DESC`)
         .limit(5);
     }),
 });

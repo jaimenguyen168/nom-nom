@@ -21,7 +21,7 @@ interface BlogCardProps {
     authorId: string;
   };
   size?: "large" | "medium";
-  href: string;
+  href?: string;
 }
 
 const BlogCard = ({ blog, size = "medium", href }: BlogCardProps) => {

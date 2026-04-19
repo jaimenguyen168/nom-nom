@@ -16,6 +16,7 @@ import RecipeCard from "@/features/recipes/components/recipe-card";
 import AppPagination from "@/components/app-pagination";
 import { PAGE_SIZE } from "@/features/recipes/constants";
 import { useSearchParams } from "next/navigation";
+import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
 const RecipesView = () => {
   const { userId } = useAuth();
@@ -25,6 +26,7 @@ const RecipesView = () => {
   const [page, setPage] = useState(1);
 
   const { data } = useGetRecipes(sortBy, PAGE_SIZE, page);
+  const { data: currentUser } = useGetCurrentUser();
 
   const recipes = data?.items ?? [];
 
@@ -40,7 +42,13 @@ const RecipesView = () => {
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold">Recipes</h1>
           {userId && (
-            <Link href="/recipes/new">
+            <Link
+              href={
+                currentUser?.username
+                  ? `/${currentUser?.username}/recipes/new`
+                  : "/sign-in"
+              }
+            >
               <PlusCircle className="size-7 text-primary-200 cursor-pointer hover:text-primary-200/80" />
             </Link>
           )}

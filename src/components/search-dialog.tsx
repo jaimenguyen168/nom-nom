@@ -37,7 +37,7 @@ const SearchDialog = ({ isOpen, onOpenChange }: SearchDialogProps) => {
 
   const handleClose = () => {
     onOpenChange(false);
-    setQuery("");
+    // setQuery("");
   };
 
   const handleNavigate = (href: string) => {
@@ -73,7 +73,7 @@ const SearchDialog = ({ isOpen, onOpenChange }: SearchDialogProps) => {
               className="w-full pl-4 pr-9 rounded-full text-sm bg-white shadow-sm border-gray-200 focus-visible:ring-primary-200 focus-visible:ring-1"
             />
             <button
-              onClick={() => (query ? setQuery("") : handleClose())}
+              onClick={() => handleClose()}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <X className="size-4" />
