@@ -26,9 +26,10 @@ interface RecipeCardProps {
     calories: number;
   };
   categoryContext?: { slug: string; name: string };
+  href?: string;
 }
 
-const RecipeCard = ({ recipe, categoryContext }: RecipeCardProps) => {
+const RecipeCard = ({ recipe, categoryContext, href }: RecipeCardProps) => {
   const router = useRouter();
   const { userId } = useAuth();
   const { data: saveData } = useIsSavedRecipe(recipe.id);
@@ -49,7 +50,7 @@ const RecipeCard = ({ recipe, categoryContext }: RecipeCardProps) => {
         `/categories/${categoryContext.slug}?categoryName=${categoryContext.name}&recipeSlug=${recipe.slug}`,
       );
     } else {
-      router.push(`/recipes/${recipe.slug}`);
+      router.push(href ?? `/recipes/${recipe.slug}`);
     }
   };
 

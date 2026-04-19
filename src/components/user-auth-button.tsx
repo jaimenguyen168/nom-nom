@@ -24,7 +24,7 @@ const UserAuthButton = () => {
   const { user, isLoaded } = useUser();
   const { data: currentUser } = useGetCurrentUser();
 
-  if (!isLoaded || !currentUser) {
+  if (!isLoaded) {
     return (
       <div className="size-10 rounded-full bg-gray-200 animate-pulse shrink-0" />
     );

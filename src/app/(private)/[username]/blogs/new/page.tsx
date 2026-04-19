@@ -13,7 +13,7 @@ export default async function CreateBlogPage({
   const { agent } = await searchParams;
 
   if (agent === "true") {
-    return <CreateBlogWithAgentView />;
+    return <CreateBlogWithAgentView username={username} />;
   }
 
   return <CreateBlogView username={username} />;

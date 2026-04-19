@@ -9,18 +9,33 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { formatSlugToTitle } from "@/lib/utils";
 
-export const ClientRecipesLayout = () => {
+interface ClientRecipesLayoutProps {
+  isPrivate?: boolean;
+}
+
+export const ClientRecipesLayout = ({
+  isPrivate,
+}: ClientRecipesLayoutProps) => {
   const params = useParams();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const recipeSlug = params?.recipeSlug as string | undefined;
+  const username = params?.username as string | undefined;
+  const recipeSlugParam = params?.recipeSlug as string | undefined;
+  const recipeSlugQuery = searchParams.get("recipeSlug") ?? undefined;
+  const recipeSlug = recipeSlugParam || recipeSlugQuery;
+
   const isEdit = pathname.endsWith("/edit");
+  const isNew = pathname.endsWith("/new");
+  const isSaved = pathname.endsWith("/saved");
 
   const formattedSlug = recipeSlug ? formatSlugToTitle(recipeSlug) : null;
+
+  if (isEdit || isNew) return null;
 
   return (
     <Breadcrumb className="mb-6">
@@ -31,36 +46,85 @@ export const ClientRecipesLayout = () => {
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/recipes">Recipes</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
 
-        {formattedSlug && (
+        {isPrivate ? (
           <>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/${username}/profile`}>Profile</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
             <BreadcrumbSeparator />
-            {isEdit ? (
+
+            {isSaved ? (
               <>
                 <BreadcrumbItem>
-                  <BreadcrumbLink
-                    href={`/recipes/${recipeSlug}`}
-                    className="capitalize"
-                  >
-                    {formattedSlug}
-                  </BreadcrumbLink>
+                  {formattedSlug ? (
+                    <BreadcrumbLink asChild>
+                      <Link href={`/${username}/recipes/saved`}>
+                        Saved Recipes
+                      </Link>
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>Saved Recipes</BreadcrumbPage>
+                  )}
                 </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Edit</BreadcrumbPage>
-                </BreadcrumbItem>
+                {formattedSlug && (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="capitalize">
+                        {formattedSlug}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                )}
               </>
             ) : (
-              <BreadcrumbItem>
-                <BreadcrumbPage className="capitalize">
-                  {formattedSlug}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
+              <>
+                <BreadcrumbItem>
+                  {formattedSlug ? (
+                    <BreadcrumbLink asChild>
+                      <Link href={`/${username}/recipes`}>My Recipes</Link>
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>My Recipes</BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {formattedSlug && (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="capitalize">
+                        {formattedSlug}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                )}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <BreadcrumbItem>
+              {formattedSlug ? (
+                <BreadcrumbLink asChild>
+                  <Link href="/recipes">Recipes</Link>
+                </BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage>Recipes</BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+
+            {formattedSlug && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="capitalize">
+                    {formattedSlug}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
             )}
           </>
         )}

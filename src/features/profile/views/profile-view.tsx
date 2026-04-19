@@ -67,8 +67,6 @@ export default function ProfileView() {
   const { user: clerkUser } = useUser();
   const isOAuthUser = (clerkUser?.externalAccounts?.length ?? 0) > 0;
 
-  if (!currentUser) return null;
-
   const {
     isUploading,
     previewUrl,
@@ -85,12 +83,14 @@ export default function ProfileView() {
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: currentUser.firstName ?? "",
-      lastName: currentUser.lastName ?? "",
-      username: currentUser.username ?? "",
-      bio: currentUser.bio ?? "",
+      firstName: currentUser?.firstName ?? "",
+      lastName: currentUser?.lastName ?? "",
+      username: currentUser?.username ?? "",
+      bio: currentUser?.bio ?? "",
     },
   });
+
+  if (!currentUser) return null;
 
   const displayImage = previewUrl || currentUser.profileImageUrl || "";
 
@@ -361,13 +361,13 @@ export default function ProfileView() {
         {/* Activity Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
           <ActivityCard
-            href="/recipes?filter=created"
+            href={`/${currentUser.username}/recipes`}
             title="My Recipes"
             description="Recipes you created"
             icon={ChefHat}
           />
           <ActivityCard
-            href="/recipes?filter=saved"
+            href={`/${currentUser.username}/recipes/saved`}
             title="Saved Recipes"
             description="Recipes you saved"
             icon={Bookmark}

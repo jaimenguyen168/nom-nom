@@ -17,7 +17,11 @@ const EXAMPLE_PROMPTS = [
   "Classic cocktails every home bartender should know",
 ];
 
-export default function CreateBlogWithAgentView() {
+export default function CreateBlogWithAgentView({
+  username,
+}: {
+  username: string;
+}) {
   const [prompt, setPrompt] = useState("");
   const router = useRouter();
   const createBlog = useCreateBlogWithAgent();
@@ -36,7 +40,7 @@ export default function CreateBlogWithAgentView() {
             "Your blog post is being generated! Check back in a moment.",
           );
           setPrompt("");
-          router.push("/blogs");
+          router.push(`/${username}/blogs`);
         },
         onError: () => {
           toast.error("Failed to start blog generation");

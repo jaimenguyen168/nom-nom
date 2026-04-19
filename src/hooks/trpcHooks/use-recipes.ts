@@ -55,6 +55,12 @@ export const useToggleSaveRecipe = (
         queryClient.invalidateQueries(
           trpc.recipes.savesCount.queryOptions({ recipeId }),
         );
+        queryClient.invalidateQueries(
+          trpc.recipes.getSavedByUser.queryOptions({}),
+        );
+        queryClient.invalidateQueries(
+          trpc.recipes.getManyByUser.queryOptions({}),
+        );
       },
     }),
   );
@@ -128,5 +134,26 @@ export const useUpdateRecipe = (username: string, slug: string) => {
         );
       },
     }),
+  );
+};
+
+export type RecipeStatusFilter = "all" | "public" | "private";
+
+export const useGetMyRecipes = (
+  status: RecipeStatusFilter = "all",
+  pageSize = 12,
+  page = 1,
+) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery({
+    ...trpc.recipes.getManyByUser.queryOptions({ status, pageSize, page }),
+    refetchInterval: 5000,
+  });
+};
+
+export const useGetSavedRecipes = (pageSize = 12, page = 1) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.recipes.getSavedByUser.queryOptions({ pageSize, page }),
   );
 };

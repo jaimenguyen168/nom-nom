@@ -72,6 +72,13 @@ export const useToggleSaveBlog = (
         queryClient.invalidateQueries(
           trpc.blogs.savesCount.queryOptions({ blogId }),
         );
+        queryClient.invalidateQueries(
+          trpc.blogs.getManyByUser.queryOptions({}),
+        );
+        queryClient.invalidateQueries(trpc.blogs.getMany.queryOptions({}));
+        queryClient.invalidateQueries(
+          trpc.blogs.getSavedByUser.queryOptions({}),
+        );
       },
     }),
   );
@@ -114,9 +121,10 @@ export const useGetMyBlogs = (
   page = 1,
 ) => {
   const trpc = useTRPC();
-  return useSuspenseQuery(
-    trpc.blogs.getManyByUser.queryOptions({ status, pageSize, page }),
-  );
+  return useSuspenseQuery({
+    ...trpc.blogs.getManyByUser.queryOptions({ status, pageSize, page }),
+    refetchInterval: 5000,
+  });
 };
 
 export const useGetSavedBlogs = (pageSize = 12, page = 1) => {
