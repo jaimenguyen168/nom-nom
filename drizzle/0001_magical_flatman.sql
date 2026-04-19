@@ -1,0 +1,1 @@
+CREATE INDEX "recipes_trgm_idx" ON "recipes" USING gin (title gin_trgm_ops);

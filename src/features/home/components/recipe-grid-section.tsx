@@ -25,6 +25,10 @@ const RecipeGridSection = ({
   const sectionTitle =
     title ?? `${feedType.charAt(0).toUpperCase() + feedType.slice(1)} Recipes`;
 
+  if (recipes.length === 0) {
+    return null;
+  }
+
   return (
     <section className="w-full">
       <div className="flex items-center justify-between mb-6">

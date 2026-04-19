@@ -27,6 +27,7 @@ const navBarLinks = [
 const NavbarHeader = () => {
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 0);
@@ -38,28 +39,35 @@ const NavbarHeader = () => {
     <nav
       className={cn(
         "sticky top-0 left-0 right-0 w-full z-50 transition-all duration-300 px-4",
-        scrolled ? "bg-white shadow-md" : "bg-transparent py-3",
+        scrolled ? "bg-white shadow-md h-14" : "bg-transparent h-16",
       )}
     >
-      <div className="section-container my-0! flex items-center justify-between">
-        <AppLogo />
+      {/* h-full + items-center = vertically center everything inside */}
+      <div className="flex items-center h-full gap-2">
+        {/* Logo — never shrinks */}
+        <div className="shrink-0 mr-8">
+          <AppLogo />
+        </div>
 
-        <div className="hidden lg:flex text-lg space-x-2 font-bold items-center">
+        {/* Desktop centered nav links */}
+        <div className="hidden lg:flex text-lg space-x-2 font-bold items-center absolute left-1/2 -translate-x-1/2">
           {navBarLinks.map(({ title, href }) => (
             <NavBarLink key={title} title={title} href={href} />
           ))}
         </div>
 
-        <div className="hidden lg:flex items-center gap-4">
-          <SearchDialog />
+        {/* Desktop right side */}
+        <div className="hidden lg:flex items-center gap-4 ml-auto">
+          <SearchDialog isOpen={searchOpen} onOpenChange={setSearchOpen} />
           <UserAuthButton />
         </div>
 
-        <div className="lg:hidden flex items-center gap-x-2">
-          <SearchDialog />
+        {/* Mobile right side */}
+        <div className="lg:hidden flex items-center gap-x-2 flex-1 min-w-0 justify-end">
+          <SearchDialog isOpen={searchOpen} onOpenChange={setSearchOpen} />
           <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="shrink-0">
                 <Menu className="size-6 text-black" />
                 <span className="sr-only">Toggle menu</span>
               </Button>

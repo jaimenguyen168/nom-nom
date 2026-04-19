@@ -507,4 +507,31 @@ export const blogsRouter = createTRPCRouter({
         hasMore: page < Math.ceil(totalResult.count / pageSize),
       };
     }),
+
+  search: publicProcedure
+    .input(z.object({ query: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const q = input.query.trim();
+      return nomnomDb
+        .select({
+          id: blogs.id,
+          title: blogs.title,
+          slug: blogs.slug,
+          featuredImage: blogs.featuredImage,
+          username: users.username,
+        })
+        .from(blogs)
+        .leftJoin(users, eq(blogs.authorId, users.id))
+        .where(
+          and(
+            eq(blogs.status, "published"),
+            sql`(
+                  word_similarity(${q}, title) > 0.5
+                  OR LOWER(title) LIKE LOWER(${"%" + q + "%"})
+                )`,
+          ),
+        )
+        .orderBy(sql`word_similarity(${q}, title) DESC`)
+        .limit(5);
+    }),
 });

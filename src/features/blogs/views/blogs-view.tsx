@@ -15,6 +15,7 @@ import { PlusCircle } from "lucide-react";
 import BlogCard from "@/features/blogs/components/blog-card";
 import AppPagination from "@/components/app-pagination";
 import { PAGE_SIZE } from "@/features/blogs/constants";
+import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
 const BlogsView = () => {
   const { userId } = useAuth();
@@ -22,6 +23,7 @@ const BlogsView = () => {
   const [page, setPage] = useState(1);
 
   const { data } = useGetBlogs(sortBy, PAGE_SIZE, page);
+  const { data: currentUser } = useGetCurrentUser();
 
   const blogs = data?.items ?? [];
 
@@ -38,7 +40,13 @@ const BlogsView = () => {
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold">Blogs</h1>
           {userId && (
-            <Link href="/blogs/new">
+            <Link
+              href={
+                currentUser?.username
+                  ? `/${currentUser?.username}/blogs/new`
+                  : "/sign-in"
+              }
+            >
               <PlusCircle className="size-7 text-primary-200 cursor-pointer hover:text-primary-200/80" />
             </Link>
           )}

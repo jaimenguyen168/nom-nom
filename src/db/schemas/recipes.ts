@@ -12,6 +12,14 @@ import { nanoid } from "nanoid";
 import { categories } from "@/db/schemas/categories";
 import { users } from "@/db/schemas/users";
 import { z } from "zod";
+import { sql } from "drizzle-orm";
+import { customType } from "drizzle-orm/pg-core";
+
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
 
 export const recipes = pgTable(
   "recipes",
@@ -32,11 +40,17 @@ export const recipes = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      sql`setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+          setweight(to_tsvector('english', coalesce(description, '')), 'B')`,
+    ),
   },
   (t) => [
     unique("recipes_user_slug_unique").on(t.userId, t.slug),
     index("recipes_user_idx").on(t.userId),
     index("recipes_public_idx").on(t.isPublic),
+    index("recipes_search_idx").using("gin", t.searchVector),
+    index("recipes_trgm_idx").using("gin", sql`title gin_trgm_ops`),
   ],
 );
 
