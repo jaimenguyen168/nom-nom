@@ -1,14 +1,37 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useFieldArray, useForm, UseFormReturn, useWatch } from "react-hook-form";
+import {
+  useFieldArray,
+  useForm,
+  UseFormReturn,
+  useWatch,
+} from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Heading, ImageIcon, List, Loader2, Quote, Trash2Icon, Upload, X } from "lucide-react";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  FileText,
+  Heading,
+  ImageIcon,
+  List,
+  Loader2,
+  Quote,
+  Trash2Icon,
+  Upload,
+  X,
+} from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -21,7 +44,13 @@ import { useGetCategories } from "@/hooks/trpcHooks/use-categories";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type EditBlogForm = z.infer<typeof createBlogSchema>;
 type ContentBlock = z.infer<typeof contentBlockSchema>;
@@ -182,7 +211,6 @@ function EditBlogForm({
         const index = parseInt(indexStr);
         if (imageState.file && !imageState.uploadedUrl) {
           try {
-
             uploadedContentImages[index] = await uploadToCloudinary(
               imageState.file,
             );
@@ -254,10 +282,10 @@ function EditBlogForm({
   const displayImageUrl = previewUrl || existingImageUrl;
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      <div className="flex justify-between items-center pt-6 pb-16">
+    <div>
+      <div className="flex justify-between items-center pb-12">
         <AppTitle title="Edit blog post" />
-        <Button variant="outline" onClick={() => router.push(path)}>
+        <Button variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>
       </div>
@@ -266,7 +294,7 @@ function EditBlogForm({
         <form
           id="blog-form"
           onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-8"
+          className="space-y-8 max-w-5xl mx-auto"
         >
           {/* Title */}
           <FormField

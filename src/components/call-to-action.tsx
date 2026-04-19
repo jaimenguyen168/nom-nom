@@ -44,8 +44,8 @@ const CallToAction = (props: CallToActionProps) => {
 
   const editPath =
     props.type === "recipe"
-      ? `/recipes/${props.username}/${props.slug}/edit`
-      : `/blogs/${props.username}/${props.slug}/edit`;
+      ? `/${props.username}/recipes/${props.slug}/edit`
+      : `/${props.username}/blogs/${props.slug}/edit`;
 
   const { data: recipeSaveData } = useIsSavedRecipe(recipeId);
   const { handleToggleSave: toggleRecipe, isPending: recipeIsPending } =

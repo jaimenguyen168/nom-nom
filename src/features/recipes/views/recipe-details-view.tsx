@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useGetRecipe } from "@/hooks/trpcHooks/use-recipes";
+import { useGetRecipeBySlug } from "@/hooks/trpcHooks/use-recipes";
 import ContactSection from "@/components/contact-section";
 import TitleInfoHeader from "@/features/recipes/components/title-info-header";
 import PrepInfo from "@/features/recipes/components/prep-info";
@@ -11,26 +11,17 @@ import CommentsSection from "@/features/recipes/components/comments-section";
 import TagsSection from "@/components/tags-section";
 import Image from "next/image";
 import CallToAction from "@/components/call-to-action";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import NutritionFactsSection from "@/features/recipes/components/nutrition-facts-section";
 import RecipeRecommendationGrid from "@/features/recipes/components/recipe-recommendation-grid";
 import RecipeCategoryList from "@/features/recipes/components/recipe-category-list";
 import RecipeCategoryGrid from "@/features/recipes/components/recipe-category-grid";
 
 interface Props {
-  username: string;
   recipeSlug: string;
 }
 
-export default function RecipeDetailsView({ username, recipeSlug }: Props) {
-  const { data } = useGetRecipe(username, recipeSlug);
+export default function RecipeDetailsView({ recipeSlug }: Props) {
+  const { data } = useGetRecipeBySlug(recipeSlug);
 
   const recipe = data.recipes;
   const user = data.users;
@@ -40,24 +31,7 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
   const tags = data.tags;
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      {/* Breadcrumb */}
-      <Breadcrumb className="mb-8">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/">Home</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/recipes">Recipes</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{recipe.title}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
+    <div>
       {/* Title + Call to Action */}
       <div className="w-full flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
         <TitleInfoHeader
@@ -76,10 +50,9 @@ export default function RecipeDetailsView({ username, recipeSlug }: Props) {
           <CallToAction
             type="recipe"
             recipeId={recipe.id}
-            username={username}
+            username={user.username as string}
             slug={recipeSlug}
             authorId={user.id}
-
           />
         </div>
       </div>

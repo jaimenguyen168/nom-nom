@@ -16,24 +16,21 @@ import {
   User2Icon,
   ClipboardPenLineIcon,
   ChevronRightIcon,
-  Loader2Icon,
 } from "lucide-react";
-import { useAuth } from "@clerk/nextjs";
+import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
 const UserAuthButton = () => {
   const { signOut } = useClerk();
-  const { user } = useUser();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { user, isLoaded } = useUser();
+  const { data: currentUser } = useGetCurrentUser();
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center size-10 shrink-0">
-        <Loader2Icon className="animate-spin" />
-      </div>
+      <div className="size-10 rounded-full bg-gray-200 animate-pulse shrink-0" />
     );
   }
 
-  if (!isSignedIn) {
+  if (!user) {
     return (
       <SignInButton>
         <Button className="pl-4 pr-3 py-2 bg-primary-200 text-white rounded-lg font-semibold">
@@ -58,18 +55,21 @@ const UserAuthButton = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem asChild>
-          <Link href="/profile" className="w-full">
+          <Link href={`/${currentUser?.username}/profile`} className="w-full">
             Go to Profile <User2Icon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/recipes/new/" className="w-full">
+          <Link
+            href={`/${currentUser?.username}/recipes/new`}
+            className="w-full"
+          >
             Create a Recipe{" "}
             <ClipboardPenLineIcon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/blogs/new/" className="w-full">
+          <Link href={`/${currentUser?.username}/blogs/new`} className="w-full">
             Create a Blog <MonitorUpIcon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>

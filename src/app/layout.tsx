@@ -30,9 +30,9 @@ export default function RootLayout({
           className={cn("h-full", "antialiased", roboto.variable)}
           suppressHydrationWarning
         >
-          <body className="min-h-full flex flex-col">
+          <body className="min-h-screen flex flex-col">
             <NavbarHeader />
-            <main className="flex-1">{children}</main>
+            <main className="flex-1 flex flex-col">{children}</main>
             <Toaster />
           </body>
         </html>

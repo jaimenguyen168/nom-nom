@@ -60,6 +60,34 @@ export const blogsRouter = createTRPCRouter({
       return { username: user.username, blogSlug: blog.slug };
     }),
 
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const result = await nomnomDb
+        .select()
+        .from(blogs)
+        .innerJoin(users, eq(blogs.authorId, users.id))
+        .where(eq(blogs.slug, input.slug))
+        .then((rows) => rows[0]);
+
+      if (!result) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Blog not found" });
+      }
+
+      const isOwner = ctx.userId === result.blogs.authorId;
+
+      if (result.blogs.status !== "published" && !isOwner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Blog not found" });
+      }
+
+      const tags = await nomnomDb
+        .select()
+        .from(blogTags)
+        .where(eq(blogTags.blogId, result.blogs.id));
+
+      return { ...result, tags };
+    }),
+
   getByUsernameAndSlug: publicProcedure
     .input(z.object({ username: z.string(), slug: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -370,5 +398,113 @@ export const blogsRouter = createTRPCRouter({
         .then((rows) => rows[0]);
 
       return { username: user.username, blogSlug: existing.slug };
+    }),
+
+  getManyByUser: authProcedure
+    .input(
+      z.object({
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+        status: z
+          .enum(["all", "published", "draft", "archived"])
+          .default("all"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { page, pageSize, status } = input;
+
+      const whereClause =
+        status === "all"
+          ? eq(blogs.authorId, ctx.userId)
+          : and(eq(blogs.authorId, ctx.userId), eq(blogs.status, status));
+
+      const data = await nomnomDb
+        .select({
+          id: blogs.id,
+          title: blogs.title,
+          slug: blogs.slug,
+          excerpt: blogs.excerpt,
+          featuredImage: blogs.featuredImage,
+          topic: blogs.topic,
+          status: blogs.status,
+          createdAt: blogs.createdAt,
+          authorId: blogs.authorId,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        })
+        .from(blogs)
+        .leftJoin(users, eq(blogs.authorId, users.id))
+        .where(whereClause)
+        .orderBy(desc(blogs.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(blogs)
+        .where(whereClause);
+
+      return {
+        items: data,
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
+    }),
+
+  getSavedByUser: authProcedure
+    .input(
+      z.object({
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { page, pageSize } = input;
+
+      const data = await nomnomDb
+        .select({
+          id: blogs.id,
+          title: blogs.title,
+          slug: blogs.slug,
+          excerpt: blogs.excerpt,
+          featuredImage: blogs.featuredImage,
+          topic: blogs.topic,
+          status: blogs.status,
+          createdAt: blogs.createdAt,
+          authorId: blogs.authorId,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        })
+        .from(userSavedBlogs)
+        .innerJoin(blogs, eq(blogs.id, userSavedBlogs.blogId))
+        .leftJoin(users, eq(blogs.authorId, users.id))
+        .where(
+          and(
+            eq(userSavedBlogs.userId, ctx.userId),
+            eq(blogs.status, "published"),
+          ),
+        )
+        .orderBy(desc(userSavedBlogs.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(userSavedBlogs)
+        .innerJoin(blogs, eq(blogs.id, userSavedBlogs.blogId))
+        .where(
+          and(
+            eq(userSavedBlogs.userId, ctx.userId),
+            eq(blogs.status, "published"),
+          ),
+        );
+
+      return {
+        items: data,
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
     }),
 });

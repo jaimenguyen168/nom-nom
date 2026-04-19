@@ -7,10 +7,20 @@ import {
 } from "@tanstack/react-query";
 
 export type BlogSortType = "new" | "popular" | "a_z";
+export type BlogStatusFilter = "all" | "published" | "draft" | "archived";
 
 export const useCreateBlog = () => {
   const trpc = useTRPC();
   return useMutation(trpc.blogs.create.mutationOptions());
+};
+
+export const useGetBlogBySlug = (slug: string) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery({
+    ...trpc.blogs.getBySlug.queryOptions({ slug }),
+    retry: false,
+    staleTime: 60 * 1000 * 30, // 30 minute
+  });
 };
 
 export const useGetBlog = (username: string, slug: string) => {
@@ -62,6 +72,13 @@ export const useToggleSaveBlog = (
         queryClient.invalidateQueries(
           trpc.blogs.savesCount.queryOptions({ blogId }),
         );
+        queryClient.invalidateQueries(
+          trpc.blogs.getManyByUser.queryOptions({}),
+        );
+        queryClient.invalidateQueries(trpc.blogs.getMany.queryOptions({}));
+        queryClient.invalidateQueries(
+          trpc.blogs.getSavedByUser.queryOptions({}),
+        );
       },
     }),
   );
@@ -95,5 +112,24 @@ export const useUpdateBlog = (username: string, slug: string) => {
         );
       },
     }),
+  );
+};
+
+export const useGetMyBlogs = (
+  status: BlogStatusFilter = "all",
+  pageSize = 12,
+  page = 1,
+) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery({
+    ...trpc.blogs.getManyByUser.queryOptions({ status, pageSize, page }),
+    refetchInterval: 5000,
+  });
+};
+
+export const useGetSavedBlogs = (pageSize = 12, page = 1) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.blogs.getSavedByUser.queryOptions({ pageSize, page }),
   );
 };

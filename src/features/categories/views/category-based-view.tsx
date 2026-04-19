@@ -8,17 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { useGetRecipesByCategory } from "@/hooks/trpcHooks/use-recipes";
 import RecipeCard from "@/features/recipes/components/recipe-card";
+import AppTitle from "@/components/app-title";
 
 type RecipeFeedType = "trending" | "popular" | "new" | "a_z" | "relevance";
 
@@ -49,25 +42,9 @@ const CategoryBasedView = ({ categorySlug, categoryName }: Props) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/">Home</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/categories">Categories</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{categoryName}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
+    <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">{categoryName}</h1>
+        <AppTitle title={categoryName} />
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Sort by:</span>
           <Select value={sortBy} onValueChange={handleSortChange}>
@@ -88,7 +65,11 @@ const CategoryBasedView = ({ categorySlug, categoryName }: Props) => {
       {recipes.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
           {recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              categoryContext={{ slug: categorySlug, name: categoryName }}
+            />
           ))}
         </div>
       ) : (

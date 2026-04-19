@@ -21,13 +21,14 @@ interface BlogCardProps {
     authorId: string;
   };
   size?: "large" | "medium";
+  href: string;
 }
 
-const BlogCard = ({ blog, size = "medium" }: BlogCardProps) => {
+const BlogCard = ({ blog, size = "medium", href }: BlogCardProps) => {
   const router = useRouter();
 
   const handleNavigation = () => {
-    router.push(`/blogs/${blog.username}/${blog.slug}`);
+    router.push(href ?? `/blogs/${blog.slug}`);
   };
 
   const handleGoToAuthor = (e: React.MouseEvent) => {
@@ -51,7 +52,9 @@ const BlogCard = ({ blog, size = "medium" }: BlogCardProps) => {
             src={blog.featuredImage || "/no-image.svg"}
             alt={blog.title}
             fill
+            sizes="100vw"
             className="object-cover"
+            loading="eager"
           />
           <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
           <CardContent className="absolute bottom-0 left-0 right-0 p-8 text-white">
@@ -85,6 +88,7 @@ const BlogCard = ({ blog, size = "medium" }: BlogCardProps) => {
           src={blog.featuredImage || "/no-image.svg"}
           alt={blog.title}
           fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover"
         />
       </div>

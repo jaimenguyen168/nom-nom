@@ -74,7 +74,7 @@ const blogDefaultValues: CreateBlogForm = {
   tags: [],
 };
 
-const CreateBlogView = () => {
+const CreateBlogView = ({ username }: { username: string }) => {
   const router = useRouter();
   const createBlog = useCreateBlog();
 
@@ -266,14 +266,14 @@ const CreateBlogView = () => {
     Object.values(contentImages).some((img) => img.isUploading);
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      <div className="flex justify-between items-center pt-6 pb-16">
+    <div>
+      <div className="flex justify-between items-center pb-16">
         <AppTitle title="Create new blog post" />
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             className="text-transparent! bg-linear-to-r! from-purple-500! via-pink-500! to-orange-500! bg-clip-text! hover:from-purple-600! hover:via-pink-600! hover:to-orange-600! font-medium"
-            onClick={() => router.push("/blogs/new?agent=true")}
+            onClick={() => router.push(`/${username}/blogs/new?agent=true`)}
           >
             <span className="flex items-center gap-2 text-xl">
               Inspire me ✨
@@ -286,7 +286,7 @@ const CreateBlogView = () => {
         <form
           id="blog-form"
           onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-8"
+          className="space-y-8 max-w-5xl mx-auto "
         >
           {/* Title */}
           <FormField

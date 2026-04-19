@@ -227,10 +227,7 @@ function EditRecipeForm({
     <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
       <div className="flex justify-between items-center pt-6 pb-16">
         <AppTitle title="Edit recipe" className="mb-2" />
-        <Button
-          variant="outline"
-          onClick={() => router.push(path)}
-        >
+        <Button variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>
       </div>

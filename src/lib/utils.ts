@@ -17,6 +17,10 @@ export const slugify = (text: string): string => {
   return `${base}-${suffix}`;
 };
 
+export const formatSlugToTitle = (slug: string): string => {
+  return slug.replace(/-\w{4,6}$/, "").replace(/-/g, " ");
+};
+
 export const formatDate = (timestamp: string): string => {
   const date = new Date(timestamp);
 

@@ -181,6 +181,50 @@ export const recipesRouter = createTRPCRouter({
       };
     }),
 
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const result = await nomnomDb
+        .select()
+        .from(recipes)
+        .innerJoin(users, eq(recipes.userId, users.id))
+        .where(eq(recipes.slug, input.slug))
+        .then((rows) => rows[0]);
+
+      if (!result) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+      }
+
+      const isOwner = ctx.userId === result.recipes.userId;
+
+      if (!result.recipes.isPublic && !isOwner) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+      }
+
+      const recipeId = result.recipes.id;
+
+      const [ingredients, instructions, nutrition, tags] = await Promise.all([
+        nomnomDb
+          .select()
+          .from(recipeIngredients)
+          .where(eq(recipeIngredients.recipeId, recipeId)),
+        nomnomDb
+          .select()
+          .from(recipeInstructions)
+          .where(eq(recipeInstructions.recipeId, recipeId)),
+        nomnomDb
+          .select()
+          .from(recipeNutrition)
+          .where(eq(recipeNutrition.recipeId, recipeId)),
+        nomnomDb
+          .select()
+          .from(recipeTags)
+          .where(eq(recipeTags.recipeId, recipeId)),
+      ]);
+
+      return { ...result, ingredients, instructions, nutrition, tags };
+    }),
+
   getByUsernameAndSlug: publicProcedure
     .input(
       z.object({
@@ -584,5 +628,133 @@ export const recipesRouter = createTRPCRouter({
       ]);
 
       return { recipeSlug: existing.slug, username: ctx.userId };
+    }),
+
+  getManyByUser: authProcedure
+    .input(
+      z.object({
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+        status: z.enum(["all", "public", "private"]).default("all"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { page, pageSize, status } = input;
+
+      const whereClause =
+        status === "all"
+          ? eq(recipes.userId, ctx.userId)
+          : status === "public"
+            ? and(eq(recipes.userId, ctx.userId), eq(recipes.isPublic, true))
+            : and(eq(recipes.userId, ctx.userId), eq(recipes.isPublic, false));
+
+      const data = await nomnomDb
+        .select({
+          id: recipes.id,
+          title: recipes.title,
+          slug: recipes.slug,
+          imageUrl: recipes.imageUrl,
+          userId: recipes.userId,
+          isPublic: recipes.isPublic,
+          createdAt: recipes.createdAt,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          rating: avg(recipeReviews.rating).as("rating"),
+          calories:
+            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+              "calories",
+            ),
+        })
+        .from(recipes)
+        .leftJoin(users, eq(recipes.userId, users.id))
+        .leftJoin(recipeReviews, eq(recipeReviews.recipeId, recipes.id))
+        .leftJoin(recipeNutrition, eq(recipeNutrition.recipeId, recipes.id))
+        .where(whereClause)
+        .groupBy(recipes.id, users.username, users.profileImageUrl)
+        .orderBy(desc(recipes.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(recipes)
+        .where(whereClause);
+
+      return {
+        items: data.map((r) => ({
+          ...r,
+          rating: r.rating ? parseFloat(r.rating) : 0,
+          calories: r.calories ?? 0,
+        })),
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
+    }),
+
+  getSavedByUser: authProcedure
+    .input(
+      z.object({
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { page, pageSize } = input;
+
+      const data = await nomnomDb
+        .select({
+          id: recipes.id,
+          title: recipes.title,
+          slug: recipes.slug,
+          imageUrl: recipes.imageUrl,
+          userId: recipes.userId,
+          isPublic: recipes.isPublic,
+          createdAt: recipes.createdAt,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          rating: avg(recipeReviews.rating).as("rating"),
+          calories:
+            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+              "calories",
+            ),
+        })
+        .from(userSavedRecipes)
+        .innerJoin(recipes, eq(recipes.id, userSavedRecipes.recipeId))
+        .leftJoin(users, eq(recipes.userId, users.id))
+        .leftJoin(recipeReviews, eq(recipeReviews.recipeId, recipes.id))
+        .leftJoin(recipeNutrition, eq(recipeNutrition.recipeId, recipes.id))
+        .where(
+          and(
+            eq(userSavedRecipes.userId, ctx.userId),
+            eq(recipes.isPublic, true),
+          ),
+        )
+        .groupBy(recipes.id, users.username, users.profileImageUrl)
+        .orderBy(desc(recipes.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(userSavedRecipes)
+        .innerJoin(recipes, eq(recipes.id, userSavedRecipes.recipeId))
+        .where(
+          and(
+            eq(userSavedRecipes.userId, ctx.userId),
+            eq(recipes.isPublic, true),
+          ),
+        );
+
+      return {
+        items: data.map((r) => ({
+          ...r,
+          rating: r.rating ? parseFloat(r.rating) : 0,
+          calories: r.calories ?? 0,
+        })),
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
     }),
 });
