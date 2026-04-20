@@ -36,7 +36,11 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useImageUpload } from "@/hooks/use-image-upload";
-import { useGetBlog, useUpdateBlog } from "@/hooks/trpcHooks/use-blogs";
+import {
+  useDeleteBlog,
+  useGetBlog,
+  useUpdateBlog,
+} from "@/hooks/trpcHooks/use-blogs";
 import { contentBlockSchema, createBlogSchema } from "@/db/schemas/blogs";
 import { Switch } from "@/components/ui/switch";
 import AppTitle from "@/components/app-title";
@@ -51,6 +55,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type EditBlogForm = z.infer<typeof createBlogSchema>;
 type ContentBlock = z.infer<typeof contentBlockSchema>;
@@ -79,7 +93,7 @@ export default function EditBlogView({ username, blogSlug }: Props) {
 
   useEffect(() => {
     if (!isOwner) {
-      router.replace(`/blogs/${username}/${blogSlug}`);
+      router.replace(`/blogs/${blogSlug}`);
     }
   }, [isOwner, router, username, blogSlug]);
 
@@ -104,7 +118,7 @@ function EditBlogForm({
   const blog = data.blogs;
   const tags = data.tags;
 
-  const path = `/blogs/${username}/${blogSlug}`;
+  const path = `/${username}/blogs?blogSlug=${blogSlug}`;
 
   const {
     isUploading,
@@ -126,6 +140,14 @@ function EditBlogForm({
     Record<number, ContentImageState>
   >({});
   const [tagInput, setTagInput] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const deleteBlog = useDeleteBlog();
+
+  const handleDelete = async () => {
+    await deleteBlog.mutateAsync({ blogId: blog.id });
+    toast.success("Blog deleted successfully");
+    router.push(`/${username}/blogs`);
+  };
 
   const form = useForm<EditBlogForm>({
     resolver: zodResolver(createBlogSchema),
@@ -285,9 +307,19 @@ function EditBlogForm({
     <div>
       <div className="flex justify-between items-center pb-12">
         <AppTitle title="Edit blog post" />
-        <Button variant="outline" onClick={() => router.back()}>
-          Cancel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteDialog(true)}
+            className="gap-1.5 text-primary-200 border-primary-200 hover:border-primary-300 hover:text-primary-300"
+          >
+            <Trash2Icon className="size-4" />
+            Delete
+          </Button>
+          <Button variant="outline" onClick={() => router.back()}>
+            Cancel
+          </Button>
+        </div>
       </div>
 
       <Form {...form}>
@@ -780,6 +812,30 @@ function EditBlogForm({
           </div>
         </form>
       </Form>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Blog</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-gray-900">{blog.title}</span>?
+              This will permanently remove the blog along with all its comments,
+              reviews, tags, and saves. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteBlog.isPending}
+              className="bg-primary-200 hover:bg-primary-300 text-white"
+            >
+              {deleteBlog.isPending ? "Deleting..." : "Delete Blog"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

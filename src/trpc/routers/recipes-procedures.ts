@@ -790,4 +790,24 @@ export const recipesRouter = createTRPCRouter({
         .orderBy(sql`similarity(title, ${q}) DESC`)
         .limit(5);
     }),
+
+  delete: authProcedure
+    .input(z.object({ recipeId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await nomnomDb
+        .select()
+        .from(recipes)
+        .where(
+          and(eq(recipes.id, input.recipeId), eq(recipes.userId, ctx.userId)),
+        )
+        .then((rows) => rows[0]);
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+      }
+
+      await nomnomDb.delete(recipes).where(eq(recipes.id, input.recipeId));
+
+      return { success: true };
+    }),
 });

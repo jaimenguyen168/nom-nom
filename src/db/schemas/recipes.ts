@@ -147,23 +147,6 @@ export const recipeComments = pgTable(
   ],
 );
 
-export const commentLikes = pgTable(
-  "comment_likes",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => nanoid()),
-    createdAt: timestamp("created_at").defaultNow(),
-    commentId: text("comment_id")
-      .notNull()
-      .references(() => recipeComments.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-  },
-  (t) => [unique("comment_like_unique").on(t.userId, t.commentId)],
-);
-
 export const recipeReviews = pgTable(
   "recipe_reviews",
   {

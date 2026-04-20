@@ -43,6 +43,21 @@ export const useCreateOrUpdateBlogReview = (blogId: string) => {
   );
 };
 
+export const useToggleBlogReviewLike = (blogId: string) => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    trpc.blogReviews.toggleReviewLike.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.blogReviews.getByBlog.queryOptions({ blogId }),
+        );
+      },
+    }),
+  );
+};
+
 // ── Replies ───────────────────────────────────────────────────────────────────
 
 export const useGetBlogReplies = (reviewId: string) => {
@@ -73,7 +88,7 @@ export const useCreateBlogReply = (blogId: string) => {
   );
 };
 
-export const useToggleBlogReplyLike = (blogId: string) => {
+export const useToggleBlogReplyLike = (blogId: string, reviewId?: string) => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -83,6 +98,11 @@ export const useToggleBlogReplyLike = (blogId: string) => {
         queryClient.invalidateQueries(
           trpc.blogReviews.getByBlog.queryOptions({ blogId }),
         );
+        if (reviewId) {
+          queryClient.invalidateQueries(
+            trpc.blogReviews.getReplies.queryOptions({ reviewId }),
+          );
+        }
       },
     }),
   );

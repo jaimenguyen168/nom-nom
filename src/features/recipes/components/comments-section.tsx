@@ -25,6 +25,7 @@ import {
   useCreateOrUpdateBlogReview,
   useToggleBlogReplyLike,
   useCreateBlogReply,
+  useToggleBlogReviewLike,
 } from "@/hooks/trpcHooks/use-blog-reviews";
 
 const PAGE_SIZE = 10;
@@ -388,6 +389,7 @@ function RecipeReviewItem({
           key={reply.id}
           reply={reply}
           reviewId={review.id}
+          recipeId={recipeId}
           currentUserId={currentUserId}
         />
       )}
@@ -415,7 +417,7 @@ function BlogReviewItem({
   const [replyText, setReplyText] = useState("");
   const [showReplyInput, setShowReplyInput] = useState(false);
   const createReply = useCreateBlogReply(blogId);
-  const toggleReplyLike = useToggleBlogReplyLike(blogId);
+  const toggleReviewLike = useToggleBlogReviewLike(blogId);
 
   const handleReply = async () => {
     if (!replyText.trim()) return;
@@ -441,13 +443,14 @@ function BlogReviewItem({
       isLikePending={false}
       setReplyText={setReplyText}
       setShowReplyInput={setShowReplyInput}
-      onLike={() => {}} // add blogReviewLikes table to enable this
+      onLike={() => toggleReviewLike.mutate({ reviewId: review.id })}
       onReply={handleReply}
       renderReplyItem={(reply) => (
         <BlogReplyItem
           key={reply.id}
           reply={reply}
           blogId={blogId}
+          reviewId={review.id}
           currentUserId={currentUserId}
         />
       )}
@@ -614,13 +617,15 @@ function ReviewItemUI({
 function RecipeReplyItem({
   reply,
   reviewId,
+  recipeId,
   currentUserId,
 }: {
   reply: ReplyBase;
   reviewId: string;
+  recipeId: string;
   currentUserId: string | null | undefined;
 }) {
-  const toggleLike = useToggleReplyLike(reviewId);
+  const toggleLike = useToggleReplyLike(reviewId, recipeId);
   return (
     <ReplyItemUI
       reply={reply}
@@ -636,13 +641,16 @@ function RecipeReplyItem({
 function BlogReplyItem({
   reply,
   blogId,
+  reviewId,
   currentUserId,
 }: {
   reply: ReplyBase;
   blogId: string;
+  reviewId: string;
   currentUserId: string | null | undefined;
 }) {
-  const toggleLike = useToggleBlogReplyLike(blogId);
+  const toggleLike = useToggleBlogReplyLike(blogId, reviewId);
+
   return (
     <ReplyItemUI
       reply={reply}

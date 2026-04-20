@@ -17,7 +17,7 @@ const BlogCategoryGrid = ({ blogId }: { blogId: string }) => {
         {relatedBlogs.map((blog) => (
           <Link
             key={blog.id}
-            href={`/blogs/${blog.username}/${blog.slug}`}
+            href={`/blogs/${blog.slug}`}
             className="flex flex-col items-center text-center hover:bg-gray-50 transition-colors rounded-lg"
           >
             <div className="w-full mb-3">

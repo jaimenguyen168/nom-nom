@@ -157,3 +157,19 @@ export const useGetSavedRecipes = (pageSize = 12, page = 1) => {
     trpc.recipes.getSavedByUser.queryOptions({ pageSize, page }),
   );
 };
+
+export const useDeleteRecipe = () => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    trpc.recipes.delete.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.recipes.getManyByUser.queryOptions({}),
+        );
+        queryClient.invalidateQueries(trpc.recipes.getMany.queryOptions({}));
+      },
+    }),
+  );
+};

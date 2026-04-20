@@ -72,7 +72,7 @@ export const useCreateReply = (recipeId: string, reviewId: string) => {
   );
 };
 
-export const useToggleReplyLike = (reviewId: string) => {
+export const useToggleReplyLike = (reviewId: string, recipeId: string) => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -81,6 +81,9 @@ export const useToggleReplyLike = (reviewId: string) => {
       onSuccess: () => {
         queryClient.invalidateQueries(
           trpc.recipeReviews.getReplies.queryOptions({ reviewId }),
+        );
+        queryClient.invalidateQueries(
+          trpc.recipeReviews.getByRecipe.queryOptions({ recipeId }),
         );
       },
     }),

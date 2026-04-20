@@ -22,7 +22,11 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useImageUpload } from "@/hooks/use-image-upload";
-import { useGetRecipe, useUpdateRecipe } from "@/hooks/trpcHooks/use-recipes";
+import {
+  useDeleteRecipe,
+  useGetRecipe,
+  useUpdateRecipe,
+} from "@/hooks/trpcHooks/use-recipes";
 import { createRecipeSchema } from "@/db/schemas/recipes";
 import { Switch } from "@/components/ui/switch";
 import AppTitle from "@/components/app-title";
@@ -30,6 +34,16 @@ import { useGetCategories } from "@/hooks/trpcHooks/use-categories";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter as useNextRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
   username: string;
@@ -45,7 +59,7 @@ export default function EditRecipeView({ username, recipeSlug }: Props) {
 
   useEffect(() => {
     if (!isOwner) {
-      router.replace(`/recipes/${username}/${recipeSlug}`);
+      router.replace(`/recipes/${recipeSlug}`);
     }
   }, [isOwner, router, username, recipeSlug]);
 
@@ -75,7 +89,7 @@ function EditRecipeForm({
   const tags = data.tags;
   const updateRecipe = useUpdateRecipe(username, recipeSlug);
 
-  const path = `/recipes/${username}/${recipeSlug}`;
+  const path = `/${username}/recipes?recipeSlug=${recipeSlug}`;
 
   const {
     isUploading,
@@ -93,6 +107,14 @@ function EditRecipeForm({
   const [existingImageUrl, setExistingImageUrl] = useState(
     recipe.imageUrl ?? "",
   );
+  const deleteRecipe = useDeleteRecipe();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const handleDelete = async () => {
+    await deleteRecipe.mutateAsync({ recipeId: recipe.id });
+    toast.success("Recipe deleted successfully");
+    router.push(`/${username}/recipes`);
+  };
 
   const prepHours = recipe.prepTimeMinutes
     ? Math.floor(recipe.prepTimeMinutes / 60).toString()
@@ -224,12 +246,22 @@ function EditRecipeForm({
   const displayImageUrl = previewUrl || existingImageUrl;
 
   return (
-    <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16">
-      <div className="flex justify-between items-center pt-6 pb-16">
+    <div>
+      <div className="flex justify-between items-center pb-16">
         <AppTitle title="Edit recipe" className="mb-2" />
-        <Button variant="outline" onClick={() => router.back()}>
-          Cancel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteDialog(true)}
+            className="gap-1.5 text-primary-200 border-primary-200 hover:border-primary-300 hover:text-primary-300"
+          >
+            <Trash2Icon className="size-4" />
+            Delete
+          </Button>
+          <Button variant="outline" onClick={() => router.back()}>
+            Cancel
+          </Button>
+        </div>
       </div>
 
       <div className="max-w-5xl mx-auto">
@@ -796,6 +828,33 @@ function EditRecipeForm({
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-gray-900">
+                {recipe.title}
+              </span>
+              ? This will permanently remove the recipe along with all its
+              ingredients, instructions, reviews, comments, and saves. This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteRecipe.isPending}
+              className="bg-primary-200 hover:bg-primary-300 text-white"
+            >
+              {deleteRecipe.isPending ? "Deleting..." : "Delete Recipe"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

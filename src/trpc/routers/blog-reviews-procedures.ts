@@ -4,6 +4,7 @@ import { nomnomDb } from "@/db";
 import {
   blogCommentLikes,
   blogComments,
+  blogReviewLikes,
   blogReviews,
 } from "@/db/schemas/blogs";
 import { users } from "@/db/schemas/users";
@@ -49,7 +50,29 @@ export const blogReviewsRouter = createTRPCRouter({
 
       const reviewIds = reviewsData.map((r) => r.id);
 
-      // Fetch replies (blogComments with parentCommentId = reviewId)
+      const reviewLikeCounts = await nomnomDb
+        .select({
+          reviewId: blogReviewLikes.reviewId,
+          likesCount: count(blogReviewLikes.id),
+        })
+        .from(blogReviewLikes)
+        .where(inArray(blogReviewLikes.reviewId, reviewIds))
+        .groupBy(blogReviewLikes.reviewId);
+
+      const likedReviewIds = ctx.userId
+        ? (
+            await nomnomDb
+              .select({ reviewId: blogReviewLikes.reviewId })
+              .from(blogReviewLikes)
+              .where(
+                and(
+                  eq(blogReviewLikes.userId, ctx.userId),
+                  inArray(blogReviewLikes.reviewId, reviewIds),
+                ),
+              )
+          ).map((r) => r.reviewId)
+        : [];
+
       const repliesData = await nomnomDb
         .select({
           id: blogComments.id,
@@ -97,8 +120,10 @@ export const blogReviewsRouter = createTRPCRouter({
       return {
         items: reviewsData.map((review) => ({
           ...review,
-          likesCount: 0, // add blogReviewLikes table if you want this
-          isLiked: false,
+          likesCount:
+            reviewLikeCounts.find((l) => l.reviewId === review.id)
+              ?.likesCount ?? 0,
+          isLiked: likedReviewIds.includes(review.id),
           replies: repliesData
             .filter((r) => r.parentCommentId === review.id)
             .map((reply) => ({
@@ -202,6 +227,34 @@ export const blogReviewsRouter = createTRPCRouter({
         .returning();
 
       return { id: created.id };
+    }),
+
+  toggleReviewLike: authProcedure
+    .input(z.object({ reviewId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await nomnomDb
+        .select()
+        .from(blogReviewLikes)
+        .where(
+          and(
+            eq(blogReviewLikes.reviewId, input.reviewId),
+            eq(blogReviewLikes.userId, ctx.userId),
+          ),
+        )
+        .then((rows) => rows[0]);
+
+      if (existing) {
+        await nomnomDb
+          .delete(blogReviewLikes)
+          .where(eq(blogReviewLikes.id, existing.id));
+        return { isLiked: false };
+      }
+
+      await nomnomDb
+        .insert(blogReviewLikes)
+        .values({ reviewId: input.reviewId, userId: ctx.userId });
+
+      return { isLiked: true };
     }),
 
   // ── Replies ───────────────────────────────────────────────
