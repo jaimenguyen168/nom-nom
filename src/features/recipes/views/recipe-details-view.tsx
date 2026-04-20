@@ -15,7 +15,6 @@ import NutritionFactsSection from "@/features/recipes/components/nutrition-facts
 import RecipeRecommendationGrid from "@/features/recipes/components/recipe-recommendation-grid";
 import RecipeCategoryList from "@/features/recipes/components/recipe-category-list";
 import RecipeCategoryGrid from "@/features/recipes/components/recipe-category-grid";
-import { useGetReviewStats } from "@/hooks/trpcHooks/use-reviews";
 
 interface Props {
   recipeSlug: string;
@@ -30,7 +29,6 @@ export default function RecipeDetailsView({ recipeSlug }: Props) {
   const instructions = data.instructions;
   const nutrition = data.nutrition;
   const tags = data.tags;
-  const { data: reviewStats } = useGetReviewStats(recipe.id);
 
   return (
     <div>
@@ -44,9 +42,6 @@ export default function RecipeDetailsView({ recipeSlug }: Props) {
           authorName={`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()}
           authorProfileImageUrl={user.profileImageUrl ?? undefined}
           date={recipe.createdAt?.toISOString() ?? ""}
-          commentsCount={reviewStats?.totalReviews ?? 0}
-          rating={reviewStats?.avgRating ?? 0}
-          ratingCount={reviewStats?.totalReviews ?? 0}
         />
         <div className="mb-2 sm:mt-2 shrink-0">
           <CallToAction
@@ -91,7 +86,7 @@ export default function RecipeDetailsView({ recipeSlug }: Props) {
           <InstructionsInfo instructions={instructions} />
 
           {/* Comments */}
-          <CommentsSection recipeId={recipe.id} />
+          <CommentsSection type="recipe" recipeId={recipe.id} />
 
           <RecipeRecommendationGrid recipeId={recipe.id} />
         </div>

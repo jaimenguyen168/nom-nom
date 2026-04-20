@@ -15,6 +15,8 @@ import Image from "next/image";
 import AppTitle from "@/components/app-title";
 import { useIsSavedRecipe, useSavesCount } from "@/hooks/trpcHooks/use-recipes";
 import { useIsSavedBlog, useBlogSavesCount } from "@/hooks/trpcHooks/use-blogs";
+import { useGetReviewStats } from "@/hooks/trpcHooks/use-recipe-reviews";
+import { useGetBlogReviewStats } from "@/hooks/trpcHooks/use-blog-reviews";
 
 interface BaseProps {
   title: string;
@@ -22,9 +24,6 @@ interface BaseProps {
   authorName: string;
   authorProfileImageUrl?: string;
   date: string;
-  commentsCount: number;
-  rating: number;
-  ratingCount: number;
   className?: string;
 }
 
@@ -47,6 +46,7 @@ const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
   const recipeId = props.type === "recipe" ? props.recipeId : "";
   const blogId = props.type === "blog" ? props.blogId : "";
 
+  // Saves
   const { data: recipeSaveData, isLoading: recipeIsLoading } =
     useIsSavedRecipe(recipeId);
   const { data: recipeSavesData, isLoading: recipeSavesLoading } =
@@ -55,6 +55,10 @@ const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
     useIsSavedBlog(blogId);
   const { data: blogSavesData, isLoading: blogSavesLoading } =
     useBlogSavesCount(blogId);
+
+  // Stats
+  const { data: recipeStats } = useGetReviewStats(recipeId);
+  const { data: blogStats } = useGetBlogReviewStats(blogId);
 
   const isSaved =
     props.type === "recipe"
@@ -70,6 +74,11 @@ const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
     props.type === "recipe"
       ? recipeIsLoading || recipeSavesLoading
       : blogSaveLoading || blogSavesLoading;
+
+  const stats = props.type === "recipe" ? recipeStats : blogStats;
+  const commentsCount = stats?.totalComments ?? 0;
+  const rating = stats?.avgRating ?? 0;
+  const ratingCount = stats?.totalReviews ?? 0;
 
   const handleGoToAuthor = () => {
     const targetUrl =
@@ -108,8 +117,8 @@ const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
 
         <div className="flex items-center gap-1.5">
           <MessageCircleMore className="size-4 text-primary-200" />
-          <span>{props.commentsCount}</span>
-          {props.commentsCount === 1 ? "Comment" : "Comments"}
+          <span>{commentsCount}</span>
+          {commentsCount === 1 ? "Comment" : "Comments"}
         </div>
 
         <div className="flex items-center gap-1">
@@ -128,15 +137,15 @@ const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
         </div>
 
         <div className="flex items-center gap-1">
-          <StarRatings rating={props.rating} />
-          {props.ratingCount === 0 ? (
+          <StarRatings rating={rating} />
+          {ratingCount === 0 ? (
             <span className="text-gray-400">No reviews yet</span>
           ) : (
             <>
               <span>
-                {Number(props.rating).toFixed(1)} / {props.ratingCount}
+                {Number(rating).toFixed(1)} / {ratingCount}
               </span>
-              {props.ratingCount === 1 ? "Review" : "Reviews"}
+              {ratingCount === 1 ? "Review" : "Reviews"}
             </>
           )}
         </div>

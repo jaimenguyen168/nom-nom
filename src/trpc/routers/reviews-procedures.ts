@@ -10,7 +10,7 @@ import {
 import { users } from "@/db/schemas/users";
 import { and, avg, count, desc, eq, inArray } from "drizzle-orm";
 
-export const reviewsRouter = createTRPCRouter({
+export const recipeReviewsRouter = createTRPCRouter({
   getByRecipe: publicProcedure
     .input(
       z.object({
@@ -142,17 +142,29 @@ export const reviewsRouter = createTRPCRouter({
   getStats: publicProcedure
     .input(z.object({ recipeId: z.string() }))
     .query(async ({ input }) => {
-      const [result] = await nomnomDb
-        .select({
-          avgRating: avg(recipeReviews.rating),
-          totalReviews: count(recipeReviews.id),
-        })
-        .from(recipeReviews)
-        .where(eq(recipeReviews.recipeId, input.recipeId));
+      const [[reviewResult], [commentResult]] = await Promise.all([
+        nomnomDb
+          .select({
+            avgRating: avg(recipeReviews.rating),
+            totalReviews: count(recipeReviews.id),
+          })
+          .from(recipeReviews)
+          .where(eq(recipeReviews.recipeId, input.recipeId)),
+
+        nomnomDb
+          .select({
+            totalComments: count(recipeComments.id),
+          })
+          .from(recipeComments)
+          .where(eq(recipeComments.recipeId, input.recipeId)),
+      ]);
 
       return {
-        avgRating: result.avgRating ? parseFloat(result.avgRating) : 0,
-        totalReviews: result.totalReviews,
+        avgRating: reviewResult.avgRating
+          ? parseFloat(reviewResult.avgRating)
+          : 0,
+        totalReviews: reviewResult.totalReviews,
+        totalComments: reviewResult.totalReviews + commentResult.totalComments,
       };
     }),
 
