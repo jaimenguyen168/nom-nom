@@ -1,427 +1,426 @@
+"use client";
+
 import React, { useState } from "react";
-import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import Image from "next/image";
+import { ThumbsUp, MessageCircle, Star, UserCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import Image from "next/image";
+import { formatDate } from "@/lib/utils";
+import AppPagination from "@/components/app-pagination";
+import {
+  useGetReviews,
+  useGetReviewStats,
+  useGetUserReview,
+  useCreateOrUpdateReview,
+  useToggleReviewLike,
+  useCreateReply,
+  useToggleReplyLike,
+} from "@/hooks/trpcHooks/use-reviews";
 
-interface BaseComment {
-  id: string;
-  content: string;
-  likesCount: number;
-  createdAt: string;
-  updatedAt: string;
-  userId: string;
-  parentCommentId: string | null;
-  user?: {
-    id: string;
-    username: string;
-    email: string;
-    profileImageUrl: string | null;
-  };
-  isLikedByCurrentUser?: boolean;
-}
+const PAGE_SIZE = 10;
 
-export interface RecipeComment extends BaseComment {
+interface Props {
   recipeId: string;
 }
 
-export interface BlogComment extends BaseComment {
-  blogId: string;
-}
+export default function CommentsSection({ recipeId }: Props) {
+  const { userId } = useAuth();
+  const { data: stats } = useGetReviewStats(recipeId);
+  const { data: userReview } = useGetUserReview(recipeId);
+  const [page, setPage] = useState(1);
+  const { data: reviewsData } = useGetReviews(recipeId, page, PAGE_SIZE);
+  const createOrUpdate = useCreateOrUpdateReview(recipeId);
 
-export type Comment = RecipeComment | BlogComment;
-
-interface CommentsProps {
-  comments: Comment[];
-  users?: Record<string, { username: string; profileImageUrl?: string }>;
-  currentUserId?: string;
-  onLike?: (commentId: string) => void;
-  onReply?: (replyText: string, commentId?: string) => void;
-  onLoadMore?: () => void;
-  onRateAndReview?: (rating: number, reviewText: string) => void;
-}
-
-interface CommentItemProps {
-  comment: Comment;
-  isReply?: boolean;
-  onLike?: (commentId: string) => void;
-  onReplyClick?: (commentId: string) => void;
-  replyingTo?: string | null;
-  replyText?: string;
-  onReplyTextChange?: (text: string) => void;
-  onReplySubmit?: (commentId: string) => void;
-  isLastReply?: boolean;
-}
-
-interface CommentPostProps {
-  rating: number;
-  reviewText: string;
-  onRatingChange: (rating: number) => void;
-  onReviewTextChange: (text: string) => void;
-  onSubmit: () => void;
-  showBackground?: boolean;
-}
-
-// Helper function to format timestamp
-const formatTimestamp = (dateString: string): string => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return "just now";
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 604800)
-    return `${Math.floor(diffInSeconds / 86400)}d ago`;
-
-  return date.toLocaleDateString();
-};
-
-const CommentsSection = ({
-  comments,
-  users = {},
-  onLike,
-  onReply,
-  onLoadMore,
-  onRateAndReview,
-}: CommentsProps) => {
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState("");
   const [rating, setRating] = useState(0);
-  const [reviewText, setReviewText] = useState("");
-  const [visibleComments, setVisibleComments] = useState(2);
+  const [comment, setComment] = useState("");
+  const [hoverRating, setHoverRating] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const topLevelComments = comments.filter(
-    (comment) => !comment.parentCommentId,
-  );
+  const reviews = reviewsData?.items ?? [];
 
-  // Helper function to get replies for a comment
-  const getReplies = (commentId: string) => {
-    return comments.filter((comment) => comment.parentCommentId === commentId);
+  const handleSubmit = async () => {
+    if (!rating) return;
+    await createOrUpdate.mutateAsync({ recipeId, rating, comment });
+    setIsEditing(false);
+    setRating(0);
+    setComment("");
   };
 
-  const handleReplyClick = (commentId: string) => {
-    setReplyingTo(replyingTo === commentId ? null : commentId);
-    setReplyText("");
+  const handleEdit = () => {
+    setRating(userReview?.rating ?? 0);
+    setComment(userReview?.comment ?? "");
+    setIsEditing(true);
   };
-
-  const handleReplySubmit = (commentId: string) => {
-    if (onReply && replyText.trim()) {
-      onReply(commentId, replyText);
-      setReplyText("");
-      setReplyingTo(null);
-    }
-  };
-
-  const handlePostReview = () => {
-    if (onRateAndReview && reviewText.trim() && rating > 0) {
-      onRateAndReview(rating, reviewText);
-      setRating(0);
-      setReviewText("");
-    }
-  };
-
-  const handleLoadMore = () => {
-    if (isAtEnd) {
-      // Show less - reset to initial 2 comments
-      setVisibleComments(2);
-    } else {
-      // Load more comments
-      setVisibleComments((prev) => prev + 10);
-      // If we're about to reach the end of current comments and there might be more, fetch them
-      if (visibleComments + 10 >= topLevelComments.length && onLoadMore) {
-        onLoadMore();
-      }
-    }
-  };
-
-  const displayedComments = topLevelComments.slice(0, visibleComments);
-  const isAtEnd = visibleComments >= topLevelComments.length;
-
-  if (topLevelComments.length === 0) {
-    return (
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-6">Comments</h2>
-
-        <Separator className="my-8" />
-
-        <CommentPost
-          rating={rating}
-          reviewText={reviewText}
-          onRatingChange={setRating}
-          onReviewTextChange={setReviewText}
-          onSubmit={handlePostReview}
-          showBackground={false}
-        />
-      </div>
-    );
-  }
 
   return (
-    <div className="mb-8">
-      <h2 className="text-2xl font-bold mb-6">Comments</h2>
+    <div className="mb-8 space-y-6">
+      <h2 className="text-2xl font-bold">Reviews</h2>
 
-      {/* Comments List */}
-      <div className="space-y-6 mb-6">
-        {displayedComments.map((comment, index) => (
-          <div key={comment.id}>
-            <CommentItem
-              comment={comment}
-              replies={getReplies(comment.id)}
-              users={users}
-              onLike={onLike}
-              onReplyClick={handleReplyClick}
-              replyingTo={replyingTo}
-              replyText={replyText}
-              onReplyTextChange={setReplyText}
-              onReplySubmit={handleReplySubmit}
-              isLastReply={getReplies(comment.id).length === 0}
-            />
-            {index < displayedComments.length - 1 && (
-              <Separator className="mt-6" />
-            )}
+      {/* Stats */}
+      {(stats?.totalReviews ?? 0) > 0 && (
+        <div className="flex items-center gap-4">
+          <span className="text-4xl font-bold">
+            {stats?.avgRating?.toFixed(1)}
+          </span>
+          <div>
+            <StarRow rating={stats?.avgRating ?? 0} size="md" />
+            <p className="text-sm text-gray-500">
+              {stats?.totalReviews} reviews
+            </p>
           </div>
-        ))}
-      </div>
-
-      {/* Load More Button */}
-      {topLevelComments.length > 2 && (
-        <>
-          <Separator className="my-8" />
-          <div className="flex flex-1 justify-end mb-8">
-            <Button
-              variant="outline"
-              onClick={handleLoadMore}
-              className="border-primary-200 text-primary-200 hover:text-primary-300 hover:bg-primary-200/20"
-            >
-              {isAtEnd ? "Show less" : "Load more"}
-            </Button>
-          </div>
-        </>
+        </div>
       )}
 
-      {/* Rate and Review Section */}
-      <CommentPost
-        rating={rating}
-        reviewText={reviewText}
-        onRatingChange={setRating}
-        onReviewTextChange={setReviewText}
-        onSubmit={handlePostReview}
-        showBackground={true}
-      />
+      <Separator />
+
+      {/* Write / Edit review form */}
+      {userId && (!userReview || isEditing) && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-lg">
+            {isEditing ? "Edit Your Review" : "Write a Review"}
+          </h3>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+                onClick={() => setRating(star)}
+              >
+                <Star
+                  className={`size-7 transition-colors ${
+                    star <= (hoverRating || rating)
+                      ? "fill-primary-200 text-primary-200"
+                      : "text-gray-300"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+          <Textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Share your experience with this recipe..."
+            className="resize-none min-h-24 bg-gray-50"
+          />
+          <div className="flex justify-end gap-2">
+            {isEditing && (
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+            )}
+            <Button
+              onClick={handleSubmit}
+              disabled={!rating || createOrUpdate.isPending}
+              className="bg-primary-200 hover:bg-primary-300 text-white"
+            >
+              {createOrUpdate.isPending
+                ? "Posting..."
+                : isEditing
+                  ? "Update"
+                  : "Post Review"}
+            </Button>
+          </div>
+          <Separator />
+        </div>
+      )}
+
+      {/* Reviews list */}
+      {!reviewsData ? null : reviews.length === 0 ? (
+        <p className="text-gray-500 text-center py-8">
+          No reviews yet. Be the first to review!
+        </p>
+      ) : (
+        <>
+          <div className="space-y-3">
+            {reviews.map((review) => (
+              <ReviewItem
+                key={review.id}
+                review={review}
+                recipeId={recipeId}
+                currentUserId={userId}
+                isOwn={review.userId === userId}
+                onEdit={handleEdit}
+                isLast={reviews[reviews.length - 1].id === review.id}
+              />
+            ))}
+          </div>
+          {(reviewsData.totalPages ?? 1) > 1 && (
+            <AppPagination
+              currentPage={page}
+              totalPages={reviewsData.totalPages ?? 1}
+              onPageChange={setPage}
+            />
+          )}
+        </>
+      )}
     </div>
   );
-};
+}
 
-export default CommentsSection;
-
-const CommentItem = ({
-  comment,
-  replies,
-  users = {},
-  isReply = false,
-  onLike,
-  onReplyClick,
-  replyingTo,
-  replyText = "",
-  onReplyTextChange,
-  onReplySubmit,
-  isLastReply = false,
-}: CommentItemProps & {
-  replies?: Comment[];
-  users?: Record<string, { username: string; profileImageUrl?: string }>;
-}) => {
-  const handleLike = () => {
-    if (onLike) {
-      onLike(comment.id);
-    }
+function ReviewItem({
+  review,
+  recipeId,
+  currentUserId,
+  isOwn,
+  onEdit,
+  isLast,
+}: {
+  review: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    createdAt: Date | null;
+    userId: string;
+    username: string | null;
+    profileImageUrl: string | null;
+    likesCount: number;
+    isLiked: boolean;
+    replies: {
+      id: string;
+      content: string;
+      createdAt: Date | null;
+      userId: string;
+      username: string | null;
+      profileImageUrl: string | null;
+      likesCount: number;
+      isLiked: boolean;
+    }[];
   };
+  recipeId: string;
+  currentUserId: string | null | undefined;
+  isOwn?: boolean;
+  onEdit?: () => void;
+  isLast?: boolean;
+}) {
+  const [replyText, setReplyText] = useState("");
+  const [showReplyInput, setShowReplyInput] = useState(false);
 
-  const handleReplyClick = () => {
-    if (onReplyClick) {
-      onReplyClick(comment.id);
-    }
+  const toggleLike = useToggleReviewLike(recipeId);
+  const createReply = useCreateReply(recipeId, review.id);
+
+  const replies = review.replies;
+
+  const handleReply = async () => {
+    if (!replyText.trim()) return;
+    await createReply.mutateAsync({
+      recipeId,
+      reviewId: review.id,
+      content: replyText,
+    });
+    setReplyText("");
+    setShowReplyInput(false);
   };
-
-  const handleReplySubmit = () => {
-    if (onReplySubmit && replyText.trim()) {
-      onReplySubmit(comment.id);
-    }
-  };
-
-  const userInfo = comment.user ||
-    users[comment.userId] || {
-      username: "Unknown User",
-      profileImageUrl: null,
-    };
 
   return (
-    <div className={`${isReply ? "ml-12 mt-4" : ""}`}>
+    <div className="space-y-3">
       <div className="flex gap-3">
-        {/* User Avatar */}
         <div className="shrink-0">
-          <Image
-            src={userInfo.profileImageUrl || "/default-avatar.png"}
-            alt={userInfo.username}
-            width={100}
-            height={100}
-            className="w-10 h-10 rounded-full object-cover"
-          />
+          {review.profileImageUrl ? (
+            <Image
+              src={review.profileImageUrl}
+              alt={review.username ?? ""}
+              width={40}
+              height={40}
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          ) : (
+            <UserCircleIcon className="size-10 text-gray-400" />
+          )}
         </div>
 
-        {/* Comment Content */}
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-1">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-900">
-                {userInfo.username}
-              </span>
-              <span className="text-sm text-gray-500">
-                {formatTimestamp(comment.createdAt)}
+              <span className="font-semibold">{review.username}</span>
+              {isOwn && (
+                <span className="text-xs text-primary-200 font-medium">
+                  You
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {isOwn && onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="text-xs text-gray-400 hover:text-primary-200 transition-colors underline"
+                >
+                  Edit
+                </button>
+              )}
+              <span className="text-xs text-gray-400">
+                {review.createdAt
+                  ? formatDate(review.createdAt.toISOString())
+                  : ""}
               </span>
             </div>
-            <Button variant="ghost" size="sm" className="h-auto p-1">
-              <MoreHorizontal className="w-4 h-4 text-gray-400" />
-            </Button>
           </div>
 
-          <p className="text-gray-700 mb-3">{comment.content}</p>
+          <StarRow rating={review.rating} size="sm" />
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLike}
-              className={`h-auto p-0 hover:bg-transparent flex items-center gap-1 ${
-                comment.isLikedByCurrentUser
-                  ? "text-primary-200"
-                  : "text-gray-500 hover:text-primary-200"
-              }`}
-            >
-              <Heart
-                className={`w-4 h-4 ${comment.isLikedByCurrentUser ? "fill-current" : ""}`}
-              />
-              <span>{comment.likesCount}</span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReplyClick}
-              className="h-auto p-0 text-gray-500 hover:text-gray-700 hover:bg-transparent flex items-center gap-1"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>Reply</span>
-            </Button>
-          </div>
-
-          {/* Reply Input */}
-          {replyingTo === comment.id && (
-            <div className="mt-3 flex gap-2">
-              <input
-                type="text"
-                value={replyText}
-                onChange={(e) => onReplyTextChange?.(e.target.value)}
-                placeholder="Write a reply..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
-                autoFocus
-              />
-              <Button
-                onClick={handleReplySubmit}
-                disabled={!replyText.trim()}
-                size="sm"
-                className="bg-primary-200 hover:bg-primary-300 text-white"
-              >
-                Reply
-              </Button>
-            </div>
+          {review.comment && (
+            <p className="text-gray-700 text-sm">{review.comment}</p>
           )}
 
-          {!isLastReply && <Separator className="mt-4" />}
+          <div className="flex items-center gap-4 pt-1">
+            <button
+              onClick={() => toggleLike.mutate({ reviewId: review.id })}
+              disabled={!currentUserId || toggleLike.isPending}
+              className={`flex items-center gap-1.5 text-sm transition-colors ${review.isLiked ? "text-primary-200" : "text-gray-400 hover:text-primary-200"}`}
+            >
+              <ThumbsUp
+                className={`size-4 ${review.isLiked ? "fill-current" : ""}`}
+              />
+              <span>{review.likesCount} Helpful</span>
+            </button>
 
-          {/* Replies */}
+            {currentUserId && (
+              <button
+                onClick={() => setShowReplyInput(!showReplyInput)}
+                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary-200 transition-colors"
+              >
+                <MessageCircle className="size-4" />
+                Reply
+              </button>
+            )}
+          </div>
+
           {replies && replies.length > 0 && (
-            <div className="mt-4">
-              {replies.map((reply, replyIndex) => (
-                <div key={reply.id}>
-                  <CommentItem
-                    comment={reply}
-                    users={users}
-                    isReply={true}
-                    onLike={onLike}
-                    onReplyClick={onReplyClick}
-                    replyingTo={replyingTo}
-                    replyText={replyText}
-                    onReplyTextChange={onReplyTextChange}
-                    onReplySubmit={onReplySubmit}
-                    isLastReply={replyIndex === replies.length - 1}
-                  />
-                  {replyIndex < replies.length - 1 && (
-                    <Separator className="my-4 ml-12" />
-                  )}
-                </div>
+            <div className="mt-4 space-y-4 border-l-2 border-gray-100 pl-4">
+              {replies.map((reply) => (
+                <ReplyItem
+                  key={reply.id}
+                  reply={reply}
+                  reviewId={review.id}
+                  currentUserId={currentUserId}
+                />
               ))}
             </div>
           )}
+
+          {showReplyInput && (
+            <div className="flex gap-2 mt-3">
+              <Textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Write a reply..."
+                className="resize-none min-h-16 text-sm bg-gray-50"
+                rows={2}
+                autoFocus
+              />
+              <div className="flex flex-col gap-1 shrink-0">
+                <Button
+                  size="sm"
+                  onClick={handleReply}
+                  disabled={!replyText.trim() || createReply.isPending}
+                  className="bg-primary-200 hover:bg-primary-300 text-white"
+                >
+                  {createReply.isPending ? "..." : "Send"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setShowReplyInput(false);
+                    setReplyText("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+      {!isLast && <Separator className="my-4" />}
     </div>
   );
-};
+}
 
-const CommentPost = ({
-  rating,
-  reviewText,
-  onRatingChange,
-  onReviewTextChange,
-  onSubmit,
-}: CommentPostProps) => {
+function ReplyItem({
+  reply,
+  reviewId,
+  currentUserId,
+}: {
+  reply: {
+    id: string;
+    content: string;
+    createdAt: Date | null;
+    userId: string;
+    username: string | null;
+    profileImageUrl: string | null;
+    likesCount: number;
+    isLiked: boolean;
+  };
+  reviewId: string;
+  currentUserId: string | null | undefined;
+}) {
+  const toggleLike = useToggleReplyLike(reviewId);
+
   return (
-    <div>
-      <h3 className="text-lg font-bold mb-4">
-        Rate this recipe and share your opinion
-      </h3>
-
-      {/* Star Rating */}
-      <div className="flex gap-1 mb-4">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Button
-            key={star}
-            variant="ghost"
-            size="sm"
-            onClick={() => onRatingChange(star)}
-            className={`p-0 h-auto hover:bg-transparent ${
-              star <= rating
-                ? "text-primary-200"
-                : "text-gray-300 hover:text-red-300"
-            }`}
-          >
-            <span className="text-2xl">★</span>
-          </Button>
-        ))}
+    <div className="flex gap-3">
+      <div className="shrink-0">
+        {reply.profileImageUrl ? (
+          <Image
+            src={reply.profileImageUrl}
+            alt={reply.username ?? ""}
+            width={32}
+            height={32}
+            className="w-8 h-8 rounded-full object-cover"
+          />
+        ) : (
+          <UserCircleIcon className="size-8 text-gray-400" />
+        )}
       </div>
-
-      {/* Review Text Area */}
-      <Textarea
-        value={reviewText}
-        onChange={(e) => onReviewTextChange(e.target.value)}
-        placeholder="Type here..."
-        rows={4}
-        className="mb-4 resize-none border-none focus:ring-1 focus:ring-primary-200 bg-gray-100/90 min-h-32"
-      />
-
-      {/* Post Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={onSubmit}
-          disabled={!reviewText.trim() || rating === 0}
-          className="bg-primary-200 hover:bg-primary-300 text-white w-24"
+      <div className="flex-1 space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-sm">{reply.username}</span>
+          <span className="text-xs text-gray-400">
+            {reply.createdAt ? formatDate(reply.createdAt.toISOString()) : ""}
+          </span>
+        </div>
+        <p className="text-gray-700 text-sm">{reply.content}</p>
+        <button
+          onClick={() => toggleLike.mutate({ commentId: reply.id })}
+          disabled={!currentUserId || toggleLike.isPending}
+          className={`flex items-center gap-1.5 text-xs transition-colors ${
+            reply.isLiked
+              ? "text-primary-200"
+              : "text-gray-400 hover:text-primary-200"
+          }`}
         >
-          Post
-        </Button>
+          <ThumbsUp
+            className={`size-3.5 ${reply.isLiked ? "fill-current" : ""}`}
+          />
+          <span>{reply.likesCount} Helpful</span>
+        </button>
       </div>
     </div>
   );
-};
+}
+
+function StarRow({
+  rating,
+  size = "sm",
+}: {
+  rating: number;
+  size?: "sm" | "md";
+}) {
+  const sizeClass = size === "md" ? "size-5" : "size-3.5";
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className={`${sizeClass} ${
+            star <= Math.round(rating)
+              ? "fill-primary-200 text-primary-200"
+              : "text-gray-200"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}

@@ -17,6 +17,8 @@ const RecipeRecommendationGrid = ({
 }: RecipeRecommendationGridProps) => {
   const { data: recipes } = useRecipeRecommendations(recipeId);
 
+  if (recipes.length === 0) return null;
+
   return (
     <div className="w-full mx-auto bg-white pt-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-8">{title}</h2>
