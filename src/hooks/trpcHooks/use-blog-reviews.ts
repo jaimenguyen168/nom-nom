@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
@@ -19,7 +20,11 @@ export const useGetBlogReviews = (blogId: string, page = 1, pageSize = 10) => {
 
 export const useGetUserBlogReview = (blogId: string) => {
   const trpc = useTRPC();
-  return useQuery(trpc.blogReviews.getUserReview.queryOptions({ blogId }));
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    ...trpc.blogReviews.getUserReview.queryOptions({ blogId }),
+    enabled: !!isSignedIn && !!blogId,
+  });
 };
 
 export const useCreateOrUpdateBlogReview = (blogId: string) => {

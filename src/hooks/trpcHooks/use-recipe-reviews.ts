@@ -1,5 +1,6 @@
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
 
 export const useGetReviews = (recipeId: string, page = 1, pageSize = 10) => {
   const trpc = useTRPC();
@@ -15,7 +16,11 @@ export const useGetReviewStats = (recipeId: string) => {
 
 export const useGetUserReview = (recipeId: string) => {
   const trpc = useTRPC();
-  return useQuery(trpc.recipeReviews.getUserReview.queryOptions({ recipeId }));
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    ...trpc.recipeReviews.getUserReview.queryOptions({ recipeId }),
+    enabled: !!isSignedIn && !!recipeId,
+  });
 };
 
 export const useCreateOrUpdateReview = (recipeId: string) => {
