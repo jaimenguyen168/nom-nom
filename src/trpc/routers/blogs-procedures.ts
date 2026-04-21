@@ -534,4 +534,22 @@ export const blogsRouter = createTRPCRouter({
         .orderBy(sql`word_similarity(${q}, title) DESC`)
         .limit(5);
     }),
+
+  delete: authProcedure
+    .input(z.object({ blogId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await nomnomDb
+        .select()
+        .from(blogs)
+        .where(and(eq(blogs.id, input.blogId), eq(blogs.authorId, ctx.userId)))
+        .then((rows) => rows[0]);
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Blog not found" });
+      }
+
+      await nomnomDb.delete(blogs).where(eq(blogs.id, input.blogId));
+
+      return { success: true };
+    }),
 });

@@ -33,7 +33,7 @@ export default function CreateRecipeWithAgentView({
             "Your recipe is being generated! Check back in a moment.",
           );
           setPrompt("");
-          router.push("/recipes");
+          router.push(`/${username}/recipes`);
         },
         onError: () => {
           toast.error("Failed to start recipe generation");

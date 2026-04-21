@@ -17,7 +17,7 @@ const RecipeCategoryGrid = ({ recipeId }: { recipeId: string }) => {
         {recipes.map((recipe) => (
           <Link
             key={recipe.id}
-            href={`/${recipe.username}/${recipe.slug}`}
+            href={`/recipes/${recipe.slug}`}
             className="flex flex-col items-center text-center hover:bg-gray-50 transition-colors rounded-lg"
           >
             <div className="w-full mb-3">

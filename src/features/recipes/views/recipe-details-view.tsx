@@ -42,9 +42,6 @@ export default function RecipeDetailsView({ recipeSlug }: Props) {
           authorName={`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()}
           authorProfileImageUrl={user.profileImageUrl ?? undefined}
           date={recipe.createdAt?.toISOString() ?? ""}
-          commentsCount={0}
-          rating={0}
-          ratingCount={0}
         />
         <div className="mb-2 sm:mt-2 shrink-0">
           <CallToAction
@@ -89,14 +86,7 @@ export default function RecipeDetailsView({ recipeSlug }: Props) {
           <InstructionsInfo instructions={instructions} />
 
           {/* Comments */}
-          <CommentsSection
-            comments={[]}
-            onLike={(id) => console.log("Liked:", id)}
-            onReply={(text, id) => console.log("Reply:", id, text)}
-            onRateAndReview={(rating, text) =>
-              console.log("Review:", rating, text)
-            }
-          />
+          <CommentsSection type="recipe" recipeId={recipe.id} />
 
           <RecipeRecommendationGrid recipeId={recipe.id} />
         </div>

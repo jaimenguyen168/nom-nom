@@ -52,9 +52,6 @@ export default function BlogDetailsView({ blogSlug }: Props) {
           authorName={user.username as string}
           authorProfileImageUrl={user.profileImageUrl as string}
           date={blog.createdAt?.toISOString() ?? ""}
-          commentsCount={0}
-          rating={0}
-          ratingCount={0}
         />
         <div className="mb-2 sm:mt-2 shrink-0">
           <CallToAction
@@ -94,14 +91,7 @@ export default function BlogDetailsView({ blogSlug }: Props) {
             contentBlocks={(blog.contentBlocks as ContentBlock[]) ?? []}
           />
 
-          <CommentsSection
-            comments={[]}
-            onLike={(id) => console.log("Liked:", id)}
-            onReply={(text, id) => console.log("Reply:", id, text)}
-            onRateAndReview={(rating, text) =>
-              console.log("Review:", rating, text)
-            }
-          />
+          <CommentsSection type="blog" blogId={blog.id} />
 
           {/* isolate the lazy query so it doesn't cause parent flash */}
           <RelatedRecipes blogId={blog.id} />

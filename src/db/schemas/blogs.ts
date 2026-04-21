@@ -106,20 +106,6 @@ export const userSavedBlogs = pgTable("user_saved_blogs", {
     .references(() => blogs.id, { onDelete: "cascade" }),
 });
 
-// Blog likes (separate from saves)
-export const blogLikes = pgTable("blog_likes", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => nanoid()),
-  createdAt: timestamp("created_at").defaultNow(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  blogId: text("blog_id")
-    .notNull()
-    .references(() => blogs.id, { onDelete: "cascade" }),
-});
-
 // Blog views tracking (simplified)
 export const blogViews = pgTable("blog_views", {
   id: text("id")
@@ -149,6 +135,23 @@ export const blogReviews = pgTable("blog_reviews", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 });
+
+export const blogReviewLikes = pgTable(
+  "blog_review_likes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    createdAt: timestamp("created_at").defaultNow(),
+    reviewId: text("review_id")
+      .notNull()
+      .references(() => blogReviews.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [unique("blog_review_like_unique").on(t.userId, t.reviewId)],
+);
 
 // Related blogs (manual curation)
 export const relatedBlogs = pgTable("related_blogs", {

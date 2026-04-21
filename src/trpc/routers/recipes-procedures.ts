@@ -2,10 +2,12 @@ import { authProcedure, createTRPCRouter, publicProcedure } from "@/trpc/init";
 import {
   createRecipeSchema,
   recipeCategories,
+  recipeCommentLikes,
   recipeComments,
   recipeIngredients,
   recipeInstructions,
   recipeNutrition,
+  recipeReviewLikes,
   recipeReviews,
   recipes,
   recipeTags,
@@ -21,14 +23,16 @@ import { categories } from "@/db/schemas/categories";
 
 // SQL expressions for sorting
 const trendingScore = sql`(
-  COUNT(DISTINCT ${userSavedRecipes.id}) * 3 +
-  COUNT(DISTINCT ${recipeReviews.id}) * 2 +
-  COUNT(DISTINCT ${recipeComments.id}) * 1 +
-  COALESCE(${avg(recipeReviews.rating)}, 0) * 1.5
-) / POWER(
+                            COUNT(DISTINCT ${userSavedRecipes.id}) * 3 +
+                            COUNT(DISTINCT ${recipeReviews.id}) * 2 +
+                            COUNT(DISTINCT ${recipeReviewLikes.id}) * 1.5 +
+                            COUNT(DISTINCT ${recipeComments.id}) * 1 +
+                            COUNT(DISTINCT ${recipeCommentLikes.id}) * 0.5 +
+                            COALESCE(${avg(recipeReviews.rating)}, 0) * 1.5
+                          ) / POWER(
   EXTRACT(EPOCH FROM (NOW() - ${recipes.createdAt})) / 3600 + 2,
-  1.5
-)`;
+                          1.5
+                          )`;
 
 const relevanceScore = sql`(
   COALESCE(${avg(recipeReviews.rating)}, 0) * 0.4 +
@@ -179,6 +183,14 @@ export const recipesRouter = createTRPCRouter({
         .leftJoin(userSavedRecipes, eq(userSavedRecipes.recipeId, recipes.id))
         .leftJoin(recipeComments, eq(recipeComments.recipeId, recipes.id))
         .leftJoin(recipeTags, eq(recipeTags.recipeId, recipes.id))
+        .leftJoin(
+          recipeReviewLikes,
+          eq(recipeReviewLikes.reviewId, recipeReviews.id),
+        )
+        .leftJoin(
+          recipeCommentLikes,
+          eq(recipeCommentLikes.commentId, recipeComments.id),
+        )
         .where(eq(recipes.isPublic, true))
         .groupBy(recipes.id, users.username, users.profileImageUrl)
         .orderBy(orderBy)
@@ -502,6 +514,14 @@ export const recipesRouter = createTRPCRouter({
         .leftJoin(users, eq(recipes.userId, users.id))
         .leftJoin(userSavedRecipes, eq(userSavedRecipes.recipeId, recipes.id))
         .leftJoin(recipeTags, eq(recipeTags.recipeId, recipes.id))
+        .leftJoin(
+          recipeReviewLikes,
+          eq(recipeReviewLikes.reviewId, recipeReviews.id),
+        )
+        .leftJoin(
+          recipeCommentLikes,
+          eq(recipeCommentLikes.commentId, recipeComments.id),
+        )
         .where(
           and(eq(recipes.isPublic, true), eq(categories.key, categorySlug)),
         )
@@ -789,5 +809,25 @@ export const recipesRouter = createTRPCRouter({
         )
         .orderBy(sql`similarity(title, ${q}) DESC`)
         .limit(5);
+    }),
+
+  delete: authProcedure
+    .input(z.object({ recipeId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await nomnomDb
+        .select()
+        .from(recipes)
+        .where(
+          and(eq(recipes.id, input.recipeId), eq(recipes.userId, ctx.userId)),
+        )
+        .then((rows) => rows[0]);
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+      }
+
+      await nomnomDb.delete(recipes).where(eq(recipes.id, input.recipeId));
+
+      return { success: true };
     }),
 });

@@ -133,3 +133,19 @@ export const useGetSavedBlogs = (pageSize = 12, page = 1) => {
     trpc.blogs.getSavedByUser.queryOptions({ pageSize, page }),
   );
 };
+
+export const useDeleteBlog = () => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    trpc.blogs.delete.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.blogs.getManyByUser.queryOptions({}),
+        );
+        queryClient.invalidateQueries(trpc.blogs.getMany.queryOptions({}));
+      },
+    }),
+  );
+};

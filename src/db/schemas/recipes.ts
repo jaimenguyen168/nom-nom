@@ -128,7 +128,6 @@ export const recipeComments = pgTable(
       .primaryKey()
       .$defaultFn(() => nanoid()),
     content: text("content").notNull(),
-    likesCount: integer("likes_count").default(0),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     userId: text("user_id")
@@ -137,29 +136,15 @@ export const recipeComments = pgTable(
     recipeId: text("recipe_id")
       .notNull()
       .references(() => recipes.id, { onDelete: "cascade" }),
-    parentCommentId: text("parent_comment_id"),
+    reviewId: text("review_id").references(() => recipeReviews.id, {
+      onDelete: "cascade",
+    }),
   },
   (t) => [
     index("recipe_comments_recipe_idx").on(t.recipeId),
     index("recipe_comments_user_idx").on(t.userId),
+    index("recipe_comments_review_idx").on(t.reviewId),
   ],
-);
-
-export const commentLikes = pgTable(
-  "comment_likes",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => nanoid()),
-    createdAt: timestamp("created_at").defaultNow(),
-    commentId: text("comment_id")
-      .notNull()
-      .references(() => recipeComments.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-  },
-  (t) => [unique("comment_like_unique").on(t.userId, t.commentId)],
 );
 
 export const recipeReviews = pgTable(
@@ -183,6 +168,40 @@ export const recipeReviews = pgTable(
     unique("recipe_review_unique").on(t.userId, t.recipeId),
     index("recipe_review_idx").on(t.recipeId),
   ],
+);
+
+export const recipeReviewLikes = pgTable(
+  "recipe_review_likes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    createdAt: timestamp("created_at").defaultNow(),
+    reviewId: text("review_id")
+      .notNull()
+      .references(() => recipeReviews.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [unique("review_like_unique").on(t.userId, t.reviewId)],
+);
+
+export const recipeCommentLikes = pgTable(
+  "recipe_comment_likes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    createdAt: timestamp("created_at").defaultNow(),
+    commentId: text("comment_id")
+      .notNull()
+      .references(() => recipeComments.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [unique("recipe_comment_like_unique").on(t.userId, t.commentId)],
 );
 
 export const userSavedRecipes = pgTable(
