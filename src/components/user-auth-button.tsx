@@ -16,6 +16,7 @@ import {
   User2Icon,
   ClipboardPenLineIcon,
   ChevronRightIcon,
+  BookIcon,
 } from "lucide-react";
 import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
@@ -71,6 +72,14 @@ const UserAuthButton = () => {
         <DropdownMenuItem asChild>
           <Link href={`/${currentUser?.username}/blogs/new`} className="w-full">
             Create a Blog <MonitorUpIcon className="ml-auto text-primary-200" />
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link
+            href={`/${currentUser?.username}/cookbooks/new`}
+            className="w-full"
+          >
+            Create a Cookbook <BookIcon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => signOut({ redirectUrl: "/" })}>

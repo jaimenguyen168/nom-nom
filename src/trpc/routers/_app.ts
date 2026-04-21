@@ -7,6 +7,7 @@ import { blogsAgentRouter } from "@/trpc/routers/blogs-agent-procedures";
 import { usersRouter } from "@/trpc/routers/users-procedures";
 import { recipeReviewsRouter } from "@/trpc/routers/reviews-procedures";
 import { blogReviewsRouter } from "@/trpc/routers/blog-reviews-procedures";
+import { cookbooksRouter } from "@/trpc/routers/cookbooks-procedures";
 
 export const appRouter = createTRPCRouter({
   users: usersRouter,
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   blogsAgent: blogsAgentRouter,
   recipeReviews: recipeReviewsRouter,
   blogReviews: blogReviewsRouter,
+  cookbooks: cookbooksRouter,
 });
 
 export type AppRouter = typeof appRouter;

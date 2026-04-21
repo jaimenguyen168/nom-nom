@@ -19,6 +19,7 @@ export default async function HomePage() {
     trpc.blogs.getMany.queryOptions({ sortBy: "new", pageSize: 4, page: 1 }),
   );
   prefetch(trpc.categories.getCategories.queryOptions());
+  prefetch(trpc.cookbooks.getMany.queryOptions({ page: 1, pageSize: 5 }));
 
   return (
     <HydrateClient>

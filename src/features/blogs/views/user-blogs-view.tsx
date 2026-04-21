@@ -19,7 +19,7 @@ const statusFilters: { label: string; value: BlogStatusFilter }[] = [
 ];
 
 const UserBlogsView = ({ username }: { username: string }) => {
-  const { data: currentUser } = useGetCurrentUser();
+  const { data: currentUser, isLoading } = useGetCurrentUser();
   const router = useRouter();
   const [status, setStatus] = useState<BlogStatusFilter>("all");
   const [page, setPage] = useState(1);
@@ -28,10 +28,10 @@ const UserBlogsView = ({ username }: { username: string }) => {
   const blogs = data?.items ?? [];
 
   useEffect(() => {
-    if (currentUser?.username !== username) {
+    if (!isLoading && currentUser?.username !== username) {
       router.replace("/blogs");
     }
-  }, [currentUser?.username, username, router]);
+  }, [currentUser?.username, username, router, isLoading]);
 
   if (currentUser?.username !== username) return null;
 

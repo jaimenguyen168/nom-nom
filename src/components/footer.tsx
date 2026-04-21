@@ -83,6 +83,17 @@ const Footer = () => {
                 <Link
                   href={
                     currentUser?.username
+                      ? `/${currentUser?.username}/cookbooks/new`
+                      : "/sign-in"
+                  }
+                >
+                  New Cookbook
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={
+                    currentUser?.username
                       ? `/${currentUser?.username}/recipes/new?agent=true`
                       : "/sign-in"
                   }

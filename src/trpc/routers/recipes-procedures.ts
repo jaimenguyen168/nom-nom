@@ -293,24 +293,29 @@ export const recipesRouter = createTRPCRouter({
 
       const recipeId = result.recipes.id;
 
-      const [ingredients, instructions, nutrition, tags] = await Promise.all([
-        nomnomDb
-          .select()
-          .from(recipeIngredients)
-          .where(eq(recipeIngredients.recipeId, recipeId)),
-        nomnomDb
-          .select()
-          .from(recipeInstructions)
-          .where(eq(recipeInstructions.recipeId, recipeId)),
-        nomnomDb
-          .select()
-          .from(recipeNutrition)
-          .where(eq(recipeNutrition.recipeId, recipeId)),
-        nomnomDb
-          .select()
-          .from(recipeTags)
-          .where(eq(recipeTags.recipeId, recipeId)),
-      ]);
+      const [ingredients, instructions, nutrition, tags, categories] =
+        await Promise.all([
+          nomnomDb
+            .select()
+            .from(recipeIngredients)
+            .where(eq(recipeIngredients.recipeId, recipeId)),
+          nomnomDb
+            .select()
+            .from(recipeInstructions)
+            .where(eq(recipeInstructions.recipeId, recipeId)),
+          nomnomDb
+            .select()
+            .from(recipeNutrition)
+            .where(eq(recipeNutrition.recipeId, recipeId)),
+          nomnomDb
+            .select()
+            .from(recipeTags)
+            .where(eq(recipeTags.recipeId, recipeId)),
+          nomnomDb
+            .select({ categoryId: recipeCategories.categoryId })
+            .from(recipeCategories)
+            .where(eq(recipeCategories.recipeId, recipeId)),
+        ]);
 
       return {
         ...result,
@@ -318,6 +323,7 @@ export const recipesRouter = createTRPCRouter({
         instructions,
         nutrition,
         tags,
+        categories,
       };
     }),
 

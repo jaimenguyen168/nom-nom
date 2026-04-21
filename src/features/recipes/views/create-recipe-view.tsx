@@ -88,7 +88,7 @@ const CreateRecipeView = ({ username }: { username: string }) => {
           onSuccess: (createdRecipe) => {
             toast.success("Recipe created successfully");
             router.push(
-              `/${createdRecipe.username}/${createdRecipe.recipeSlug}`,
+              `/${createdRecipe.username}/recipes?recipeSlug=${createdRecipe.recipeSlug}`,
             );
           },
           onError: (error) => {

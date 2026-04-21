@@ -5,6 +5,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
 
 export type BlogSortType = "new" | "popular" | "a_z";
 export type BlogStatusFilter = "all" | "published" | "draft" | "archived";
@@ -44,12 +45,19 @@ export const useGetBlogs = (
 
 export const useIsSavedBlog = (blogId: string) => {
   const trpc = useTRPC();
-  return useQuery(trpc.blogs.isSaved.queryOptions({ blogId }));
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    ...trpc.blogs.isSaved.queryOptions({ blogId }),
+    enabled: !!isSignedIn && !!blogId,
+  });
 };
 
 export const useBlogSavesCount = (blogId: string) => {
   const trpc = useTRPC();
-  return useQuery(trpc.blogs.savesCount.queryOptions({ blogId }));
+  return useQuery({
+    ...trpc.blogs.savesCount.queryOptions({ blogId }),
+    enabled: !!blogId,
+  });
 };
 
 export const useToggleSaveBlog = (

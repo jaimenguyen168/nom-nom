@@ -223,7 +223,7 @@ const CreateBlogView = ({ username }: { username: string }) => {
           onSuccess: (createdBlog) => {
             toast.success("Blog created successfully");
             router.push(
-              `/blogs/${createdBlog.username}/${createdBlog.blogSlug}`,
+              `/${createdBlog.username}/blogs?blogSlug=${createdBlog.blogSlug}`,
             );
           },
           onError: (error) => {

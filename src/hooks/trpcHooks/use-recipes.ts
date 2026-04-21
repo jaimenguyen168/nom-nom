@@ -5,6 +5,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
 
 export type RecipeFeedType =
   | "trending"
@@ -72,14 +73,20 @@ export const useToggleSaveRecipe = (
 
 export const useIsSavedRecipe = (recipeId: string) => {
   const trpc = useTRPC();
-  return useQuery(trpc.recipes.isSaved.queryOptions({ recipeId }));
+  const { isSignedIn } = useAuth();
+  return useQuery({
+    ...trpc.recipes.isSaved.queryOptions({ recipeId }),
+    enabled: !!isSignedIn && !!recipeId,
+  });
 };
 
 export const useSavesCount = (recipeId: string) => {
   const trpc = useTRPC();
-  return useQuery(trpc.recipes.savesCount.queryOptions({ recipeId }));
+  return useQuery({
+    ...trpc.recipes.savesCount.queryOptions({ recipeId }),
+    enabled: !!recipeId,
+  });
 };
-
 export const useRecipeRecommendations = (recipeId: string) => {
   const trpc = useTRPC();
   return useSuspenseQuery(
