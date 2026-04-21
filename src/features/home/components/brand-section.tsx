@@ -11,35 +11,35 @@ const brands = [
     name: "Apple",
     id: 1,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <FaApple size={32} {...(props as any)} />
+      <FaApple size={32} {...props} />
     ),
   },
   {
     name: "Amazon",
     id: 2,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <FaAmazon size={32} {...(props as any)} />
+      <FaAmazon size={32} {...props} />
     ),
   },
   {
     name: "Google",
     id: 3,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <FaGoogle size={32} {...(props as any)} />
+      <FaGoogle size={32} {...props} />
     ),
   },
   {
     name: "Walmart",
     id: 4,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <TbBrandWalmart size={32} {...(props as any)} />
+      <TbBrandWalmart size={32} {...props} />
     ),
   },
   {
     name: "Instacart",
     id: 5,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <SiInstacart size={32} {...(props as any)} />
+      <SiInstacart size={32} {...props} />
     ),
   },
 ];

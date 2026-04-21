@@ -93,7 +93,6 @@ function RecipeCommentsSection({ recipeId }: { recipeId: string }) {
       setIsEditing={setIsEditing}
       setPage={setPage}
       onSubmit={handleSubmit}
-      onEdit={handleEdit}
       renderReview={(review, isLast) => (
         <RecipeReviewItem
           key={review.id}
@@ -101,8 +100,7 @@ function RecipeCommentsSection({ recipeId }: { recipeId: string }) {
           recipeId={recipeId}
           currentUserId={userId}
           isOwn={review.userId === userId}
-          onEdit={handleEdit}
-          isLast={isLast}
+              isLast={isLast}
         />
       )}
     />
@@ -159,7 +157,6 @@ function BlogCommentsSection({ blogId }: { blogId: string }) {
       setIsEditing={setIsEditing}
       setPage={setPage}
       onSubmit={handleSubmit}
-      onEdit={handleEdit}
       renderReview={(review, isLast) => (
         <BlogReviewItem
           key={review.id}
@@ -167,8 +164,7 @@ function BlogCommentsSection({ blogId }: { blogId: string }) {
           blogId={blogId}
           currentUserId={userId}
           isOwn={review.userId === userId}
-          onEdit={handleEdit}
-          isLast={isLast}
+              isLast={isLast}
         />
       )}
     />
@@ -219,7 +215,6 @@ function ReviewsUI({
   setIsEditing,
   setPage,
   onSubmit,
-  onEdit,
   renderReview,
 }: {
   stats: { avgRating: number; totalReviews: number } | undefined | null;
@@ -239,7 +234,6 @@ function ReviewsUI({
   setIsEditing: (v: boolean) => void;
   setPage: (v: number) => void;
   onSubmit: () => void;
-  onEdit: () => void;
   renderReview: (review: ReviewBase, isLast: boolean) => React.ReactNode;
 }) {
   return (

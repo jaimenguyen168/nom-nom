@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+
+import React from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,6 @@ const contactFormSchema = z.object({
 });
 
 export const ContactView = () => {
-  const [email, setEmail] = useState("");
 
   const form = useForm<z.infer<typeof contactFormSchema>>({
     resolver: zodResolver(contactFormSchema),
@@ -50,11 +50,6 @@ export const ContactView = () => {
     console.log("Contact form submitted:", data);
   };
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Newsletter signup:", email);
-    setEmail("");
-  };
 
   return (
     <div className="w-full pb-20">
