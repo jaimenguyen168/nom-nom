@@ -21,7 +21,7 @@ const statusFilters: { label: string; value: RecipeStatusFilter }[] = [
 ];
 
 const UserRecipesView = ({ username }: { username: string }) => {
-  const { data: currentUser } = useGetCurrentUser();
+  const { data: currentUser, isLoading } = useGetCurrentUser();
   const router = useRouter();
   const [status, setStatus] = useState<RecipeStatusFilter>("all");
   const [page, setPage] = useState(1);
@@ -30,10 +30,10 @@ const UserRecipesView = ({ username }: { username: string }) => {
   const recipes = data?.items ?? [];
 
   useEffect(() => {
-    if (currentUser?.username !== username) {
+    if (!isLoading && currentUser?.username !== username) {
       router.replace("/recipes");
     }
-  }, [currentUser?.username, username, router]);
+  }, [currentUser?.username, username, router, isLoading]);
 
   if (currentUser?.username !== username) return null;
 

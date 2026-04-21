@@ -26,16 +26,18 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
-  User,
-  Mail,
-  Lock,
-  Edit3,
-  ChefHat,
-  Bookmark,
-  BookOpen,
-  LogOut,
-  Heart,
+  UserIcon,
+  MailIcon,
+  LockIcon,
+  Edit3Icon,
+  LogOutIcon,
   LucideIcon,
+  BookMarkedIcon,
+  LibraryIcon,
+  HeartIcon,
+  BookOpenIcon,
+  BookmarkIcon,
+  ChefHatIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -217,7 +219,7 @@ export default function ProfileView() {
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
                           {...field}
                           value={`${form.watch("firstName")} ${form.watch("lastName") ?? ""}`.trim()}
@@ -264,7 +266,7 @@ export default function ProfileView() {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <MailIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     value={currentUser.email}
                     className="pl-10 bg-gray-50 cursor-not-allowed"
@@ -282,7 +284,7 @@ export default function ProfileView() {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     type="password"
                     value="••••••••••"
@@ -302,7 +304,7 @@ export default function ProfileView() {
                   <FormLabel>Bio</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Edit3 className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                      <Edit3Icon className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                       {isEditing ? (
                         <Textarea
                           {...field}
@@ -364,25 +366,37 @@ export default function ProfileView() {
             href={`/${currentUser.username}/recipes`}
             title="My Recipes"
             description="Recipes you created"
-            icon={ChefHat}
+            icon={ChefHatIcon}
           />
           <ActivityCard
             href={`/${currentUser.username}/recipes/saved`}
             title="Saved Recipes"
             description="Recipes you saved"
-            icon={Bookmark}
+            icon={BookmarkIcon}
           />
           <ActivityCard
             href={`/${currentUser.username}/blogs`}
             title="My Blogs"
             description="Blogs you created"
-            icon={BookOpen}
+            icon={BookOpenIcon}
           />
           <ActivityCard
             href={`/${currentUser.username}/blogs/saved`}
             title="Saved Blogs"
             description="Blogs you saved"
-            icon={Heart}
+            icon={HeartIcon}
+          />
+          <ActivityCard
+            href={`/${currentUser.username}/cookbooks`}
+            title="My Cookbooks"
+            description="Cookbooks you created"
+            icon={BookMarkedIcon}
+          />
+          <ActivityCard
+            href={`/${currentUser.username}/cookbooks/saved`}
+            title="Saved Cookbooks"
+            description="Cookbooks you saved"
+            icon={LibraryIcon}
           />
         </div>
 
@@ -394,7 +408,7 @@ export default function ProfileView() {
             onClick={handleSignOut}
             className="text-gray-500 hover:text-gray-700"
           >
-            <LogOut className="size-4 mr-2" />
+            <LogOutIcon className="size-4 mr-2" />
             Sign out
           </Button>
         </div>

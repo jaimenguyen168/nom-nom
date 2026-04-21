@@ -1,6 +1,6 @@
 "use client";
 
-import React, { SVGProps } from "react";
+import React, { useState, useEffect, SVGProps } from "react";
 import { FaApple, FaAmazon, FaGoogle } from "react-icons/fa";
 import { TbBrandWalmart } from "react-icons/tb";
 import { SiInstacart } from "react-icons/si";
@@ -11,40 +11,48 @@ const brands = [
     name: "Apple",
     id: 1,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <FaApple size={32} {...props} />
+      <FaApple size={32} {...(props as any)} />
     ),
   },
   {
     name: "Amazon",
     id: 2,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <FaAmazon size={32} {...props} />
+      <FaAmazon size={32} {...(props as any)} />
     ),
   },
   {
     name: "Google",
     id: 3,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <FaGoogle size={32} {...props} />
+      <FaGoogle size={32} {...(props as any)} />
     ),
   },
   {
     name: "Walmart",
     id: 4,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <TbBrandWalmart size={32} {...props} />
+      <TbBrandWalmart size={32} {...(props as any)} />
     ),
   },
   {
     name: "Instacart",
     id: 5,
     img: (props: SVGProps<SVGSVGElement>) => (
-      <SiInstacart size={32} {...props} />
+      <SiInstacart size={32} {...(props as any)} />
     ),
   },
 ];
 
 const BrandsSection = () => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <section className="section-container py-24">
       <div className="flex justify-center items-center">

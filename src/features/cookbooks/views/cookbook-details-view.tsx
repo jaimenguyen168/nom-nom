@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { useGetCookbookBySlug } from "@/hooks/trpcHooks/use-cookbooks";
+import {
+  useGetCookbookBySlug,
+  useToggleSaveCookbook,
+} from "@/hooks/trpcHooks/use-cookbooks";
 import { useGetRecipeBySlug } from "@/hooks/trpcHooks/use-recipes";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import {
   ChefHat,
   Star,
@@ -13,6 +17,8 @@ import {
   ArrowRight,
   ExternalLink,
   Users,
+  Lock,
+  Bookmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -23,18 +29,28 @@ import IngredientsInfo from "@/features/recipes/components/ingredients-info";
 import InstructionsInfo from "@/features/recipes/components/instructions-info";
 import NutritionFactsSection from "@/features/recipes/components/nutrition-facts-section";
 import TagsSection from "@/components/tags-section";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Props {
   slug: string;
 }
 
+const PREVIEW_COUNT = 2;
+
 export default function CookbookDetailsView({ slug }: Props) {
   const { data: cookbook } = useGetCookbookBySlug(slug);
+  const { userId } = useAuth();
   const [activeRecipeIndex, setActiveRecipeIndex] = useState(0);
   const router = useRouter();
 
+  const toggleSave = useToggleSaveCookbook(slug);
+  const isSaved = cookbook.isSaved ?? false;
+  const isOwner = userId === cookbook.authorId;
+
   const recipes = cookbook.recipes ?? [];
   const activeRecipe = recipes[activeRecipeIndex];
+  const isLocked = cookbook.isLocked ?? false;
+  const isPaid = !cookbook.isFree;
 
   type CookbookRecipe = (typeof recipes)[number] & { index: number };
 
@@ -53,16 +69,14 @@ export default function CookbookDetailsView({ slug }: Props) {
       {/* ── Hero ── */}
       <div className="relative w-full h-84 lg:h-125 mb-10 overflow-hidden rounded-3xl">
         <Image
-          src={cookbook.coverImageUrl ?? "/no-image.svg"}
+          src={cookbook.bannerImageUrl ?? "/no-image.svg"}
           alt={cookbook.title}
           fill
           className="object-cover"
           priority
         />
-        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-linear-to-t from-black via-black/50 to-black/10" />
 
-        {/* Text overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
           {cookbook.edition && (
             <p className="text-xs text-white/60 uppercase tracking-widest mb-2">
@@ -72,7 +86,22 @@ export default function CookbookDetailsView({ slug }: Props) {
           <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-2">
             {cookbook.title}
           </h1>
-          <p className="text-white/70 mb-4">by {cookbook.username}</p>
+
+          <div
+            className="flex items-center gap-2 mb-4 cursor-pointer w-fit"
+            onClick={() => router.push(`/${cookbook.username}`)}
+          >
+            <Avatar className="size-6 border border-white/30">
+              <AvatarImage
+                src={cookbook.profileImageUrl ?? ""}
+                className="object-cover"
+              />
+              <AvatarFallback className="text-[10px] bg-black/40 text-white">
+                {cookbook.username?.[0]?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <p className="text-white/70 text-sm">by {cookbook.username}</p>
+          </div>
 
           <div className="flex flex-wrap items-center gap-3 mb-4">
             {cookbook.isFree ? (
@@ -122,6 +151,22 @@ export default function CookbookDetailsView({ slug }: Props) {
             )}
           </div>
         </div>
+
+        {cookbook.isFree && !isOwner && userId && (
+          <button
+            onClick={() => toggleSave.mutate({ cookbookId: cookbook.id })}
+            disabled={toggleSave.isPending}
+            className="flex items-center gap-1.5 text-sm text-white hover:text-white transition-colors p-3 bg-primary-200 rounded-md  absolute top-4 right-4"
+          >
+            <Bookmark
+              className={cn(
+                "size-4",
+                isSaved ? "fill-white text-white" : "text-white/70",
+              )}
+            />
+            {isSaved ? "Saved" : "Save Cookbook"}
+          </button>
+        )}
       </div>
 
       {/* ── Description + Tags ── */}
@@ -150,12 +195,103 @@ export default function CookbookDetailsView({ slug }: Props) {
 
       <Separator className="mb-10" />
 
-      {/* ── Content ── */}
-      {recipes.length === 0 ? (
+      {/* ── Access Gate ── */}
+      {isLocked && (
+        <div className="mb-10 border rounded-xl overflow-hidden">
+          {/* CTA */}
+          <div className="bg-gray-50 p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div>
+                <h3 className="text-xl font-bold mb-1">
+                  {isPaid
+                    ? "Purchase to unlock all recipes"
+                    : "Save this cookbook to access all recipes"}
+                </h3>
+                <p className="text-gray-500 text-sm max-w-md">
+                  {isPaid
+                    ? `One-time purchase gives you lifetime access to all ${recipes.length} exclusive recipes.`
+                    : `This is a free cookbook — save it to your library to get full access to all ${recipes.length} recipes.`}
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center gap-2 shrink-0">
+                {isPaid ? (
+                  <>
+                    <p className="text-3xl font-bold text-primary-200">
+                      {cookbook.currency} {cookbook.price}
+                    </p>
+                    <Button
+                      onClick={() => !userId && router.push("/sign-in")}
+                      className="px-8 bg-primary-200 hover:bg-primary-300 text-white"
+                    >
+                      {userId ? "Purchase Cookbook" : "Sign in to Purchase"}
+                    </Button>
+                    <p className="text-xs text-gray-400">One-time purchase</p>
+                  </>
+                ) : (
+                  <Button
+                    onClick={() => !userId && router.push("/sign-in")}
+                    className="px-8 bg-primary-200 hover:bg-primary-300 text-white gap-2"
+                  >
+                    <Bookmark className="size-4" />
+                    {userId ? "Save Cookbook — Free" : "Sign in to Save"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Recipe preview strip */}
+          {recipes.length > 0 && (
+            <div className="p-6 border-t">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+                Preview — {PREVIEW_COUNT} of {recipes.length} recipes
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {recipes.slice(0, PREVIEW_COUNT).map((recipe) => (
+                  <div
+                    key={recipe.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 bg-white"
+                  >
+                    <div className="relative size-12 rounded-md overflow-hidden shrink-0 bg-gray-100">
+                      {recipe.imageUrl && (
+                        <Image
+                          src={recipe.imageUrl}
+                          alt={recipe.title}
+                          fill
+                          className="object-cover"
+                        />
+                      )}
+                    </div>
+                    <p className="text-sm font-medium text-gray-700 truncate">
+                      {recipe.title}
+                    </p>
+                  </div>
+                ))}
+                {recipes.length > PREVIEW_COUNT && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-gray-200 bg-gray-50">
+                    <div className="size-12 rounded-md bg-gray-200 flex items-center justify-center shrink-0">
+                      <Lock className="size-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-400">
+                      +{recipes.length - PREVIEW_COUNT} more locked recipes
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Full Content ── */}
+      {!isLocked && recipes.length === 0 && (
         <div className="text-center py-20 text-gray-400">
           No recipes in this cookbook yet.
         </div>
-      ) : (
+      )}
+
+      {!isLocked && recipes.length > 0 && (
         <div className="flex flex-col lg:flex-row gap-10">
           {/* Sidebar */}
           <div className="lg:w-64 shrink-0">
@@ -174,12 +310,17 @@ export default function CookbookDetailsView({ slug }: Props) {
                     {chapterRecipes.map((recipe) => (
                       <button
                         key={recipe.id}
-                        onClick={() => setActiveRecipeIndex(recipe.index)}
+                        onClick={() =>
+                          !recipe.isLocked && setActiveRecipeIndex(recipe.index)
+                        }
+                        disabled={recipe.isLocked}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all text-sm",
-                          activeRecipeIndex === recipe.index
-                            ? "bg-primary-200 text-white shadow-sm"
-                            : "hover:bg-gray-100 text-gray-600",
+                          recipe.isLocked
+                            ? "opacity-50 cursor-not-allowed"
+                            : activeRecipeIndex === recipe.index
+                              ? "bg-primary-200 text-white shadow-sm"
+                              : "hover:bg-gray-100 text-gray-600",
                         )}
                       >
                         <div className="relative size-8 rounded-md overflow-hidden shrink-0 bg-gray-200">
@@ -188,11 +329,19 @@ export default function CookbookDetailsView({ slug }: Props) {
                               src={recipe.imageUrl}
                               alt={recipe.title}
                               fill
-                              className="object-cover"
+                              className={cn(
+                                "object-cover",
+                                recipe.isLocked && "blur-sm",
+                              )}
                             />
                           )}
                         </div>
-                        <p className="truncate font-medium">{recipe.title}</p>
+                        <p className="truncate font-medium flex-1">
+                          {recipe.title}
+                        </p>
+                        {recipe.isLocked && (
+                          <Lock className="size-3.5 text-gray-400 shrink-0" />
+                        )}
                       </button>
                     ))}
                   </div>
@@ -202,10 +351,10 @@ export default function CookbookDetailsView({ slug }: Props) {
           </div>
 
           {/* Recipe Content */}
-          {activeRecipe && (
-            <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0">
+            {activeRecipe && !activeRecipe.isLocked ? (
               <RecipeContent
-                recipeSlug={activeRecipe.slug}
+                recipeSlug={activeRecipe.slug!}
                 activeIndex={activeRecipeIndex}
                 total={recipes.length}
                 onPrev={() => setActiveRecipeIndex((i) => Math.max(0, i - 1))}
@@ -216,8 +365,21 @@ export default function CookbookDetailsView({ slug }: Props) {
                 }
                 onViewFull={() => router.push(`/recipes/${activeRecipe.slug}`)}
               />
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Lock className="size-7 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold">Recipe Locked</h3>
+                <p className="text-gray-500 max-w-sm">
+                  Purchase this cookbook to unlock all {recipes.length} recipes.
+                </p>
+                <Button className="bg-primary-200 hover:bg-primary-300 text-white px-8">
+                  Purchase for {cookbook.currency} {cookbook.price}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

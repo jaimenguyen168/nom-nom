@@ -46,8 +46,6 @@ const CreateCookbookView = () => {
   const [tagInput, setTagInput] = useState("");
   const [selectedRecipeIds, setSelectedRecipeIds] = useState<string[]>([]);
 
-  const { data: myRecipes } = useGetMyRecipes("public");
-
   const coverImage = useImageUpload({
     folder: "cookbooks",
     uploadPreset: "recipe_images",
@@ -70,7 +68,7 @@ const CreateCookbookView = () => {
       language: "English",
       edition: "",
       isFree: true,
-      price: undefined,
+      price: 0,
       currency: "USD",
       status: "draft",
       tags: [],
@@ -80,6 +78,9 @@ const CreateCookbookView = () => {
 
   const isFree = useWatch({ control: form.control, name: "isFree" });
   const tags = useWatch({ control: form.control, name: "tags" });
+
+  // Free cookbooks use public recipes, paid cookbooks use private recipes
+  const { data: myRecipes } = useGetMyRecipes(isFree ? "public" : "private");
 
   const toggleRecipe = (id: string) => {
     setSelectedRecipeIds((prev) =>
@@ -169,7 +170,7 @@ const CreateCookbookView = () => {
             <FormItem>
               <FormLabel>Cover Image</FormLabel>
               {coverImage.previewUrl ? (
-                <div className="relative w-full h-72 border rounded-lg overflow-hidden">
+                <div className="relative w-full h-80 border rounded-lg overflow-hidden">
                   <Image
                     src={coverImage.previewUrl}
                     alt="Cover preview"
@@ -187,8 +188,8 @@ const CreateCookbookView = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg py-12 text-center">
-                  <div className="space-y-3">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg justify-center items-center flex-1 flex-col flex h-80">
+                  <div className="space-y-3 text-center">
                     <p className="text-gray-600">Upload Cover Image</p>
                     <label htmlFor="cover-upload">
                       <Button
@@ -209,7 +210,7 @@ const CreateCookbookView = () => {
                       onChange={coverImage.handleFileChange}
                       className="hidden"
                     />
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-400 mt-2">
                       Max 30MB | JPG, PNG, WEBP
                     </p>
                   </div>
@@ -224,7 +225,7 @@ const CreateCookbookView = () => {
                 Optional — displayed at the top of the cookbook page
               </FormDescription>
               {bannerImage.previewUrl ? (
-                <div className="relative w-full h-40 border rounded-lg overflow-hidden">
+                <div className="relative w-full h-64 border rounded-lg overflow-hidden">
                   <Image
                     src={bannerImage.previewUrl}
                     alt="Banner preview"
@@ -242,8 +243,8 @@ const CreateCookbookView = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg py-8 text-center">
-                  <div className="space-y-3">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg justify-center items-center flex-1 flex-col flex h-64">
+                  <div className="space-y-3 text-center">
                     <label htmlFor="banner-upload">
                       <Button
                         type="button"
@@ -305,7 +306,6 @@ const CreateCookbookView = () => {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="difficulty"
@@ -315,10 +315,7 @@ const CreateCookbookView = () => {
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue
-                            placeholder="Select difficulty"
-                            className="w-full"
-                          />
+                          <SelectValue placeholder="Select difficulty" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -350,7 +347,6 @@ const CreateCookbookView = () => {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="language"
@@ -464,15 +460,107 @@ const CreateCookbookView = () => {
               }}
             />
 
-            {/* Recipe Picker */}
+            {/* Pricing — must come before recipe picker so isFree is set */}
+            <FormField
+              control={form.control}
+              name="isFree"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <FormLabel className="text-base">
+                      {field.value ? "Free" : "Paid"}
+                    </FormLabel>
+                    <FormDescription>
+                      {field.value
+                        ? "Anyone can access this cookbook for free"
+                        : "Set a price for this cookbook"}
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={(val) => {
+                        field.onChange(val);
+                        // Reset selected recipes when toggling free/paid
+                        setSelectedRecipeIds([]);
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {!isFree && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0.01}
+                          step={0.01}
+                          placeholder="9.99"
+                          value={field.value === 0 ? "" : field.value}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === ""
+                                ? 0
+                                : Number(e.target.value),
+                            )
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="USD" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="EUR">EUR</SelectItem>
+                          <SelectItem value="GBP">GBP</SelectItem>
+                          <SelectItem value="CAD">CAD</SelectItem>
+                          <SelectItem value="AUD">AUD</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Recipe Picker — after pricing so isFree is reactive */}
             <FormItem>
               <FormLabel>Recipes</FormLabel>
               <FormDescription className="text-xs">
-                Select recipes to include in this cookbook
+                {isFree
+                  ? "Select public recipes to include in this cookbook"
+                  : "Select private recipes — these are exclusive to paid buyers"}
               </FormDescription>
               {!myRecipes?.items || myRecipes.items.length === 0 ? (
                 <p className="text-sm text-gray-400 py-4">
-                  No public recipes found. Create some recipes first.
+                  {isFree
+                    ? "No public recipes found. Create some recipes first."
+                    : "No private recipes found. Create private recipes to include in a paid cookbook."}
                 </p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
@@ -517,86 +605,6 @@ const CreateCookbookView = () => {
                 </div>
               )}
             </FormItem>
-
-            {/* Pricing */}
-            <FormField
-              control={form.control}
-              name="isFree"
-              render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                  <div>
-                    <FormLabel className="text-base">
-                      {field.value ? "Free" : "Paid"}
-                    </FormLabel>
-                    <FormDescription>
-                      {field.value
-                        ? "Anyone can access this cookbook for free"
-                        : "Set a price for this cookbook"}
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {!isFree && (
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          step={0.01}
-                          placeholder="9.99"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Currency</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="USD" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="USD">USD</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                          <SelectItem value="GBP">GBP</SelectItem>
-                          <SelectItem value="CAD">CAD</SelectItem>
-                          <SelectItem value="AUD">AUD</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
 
             {/* Status */}
             <FormField

@@ -7,6 +7,7 @@ import BlogGridSection from "@/features/home/components/blog-grid-section";
 import StayInTouchSection from "@/features/home/components/stay-in-touch-section";
 import CategorySection from "@/features/home/components/category-section";
 import BrandsSection from "@/features/home/components/brand-section";
+import CookbookGridSection from "@/features/home/components/cookbook-grid-section";
 
 export default function HomeView() {
   return (
@@ -18,6 +19,7 @@ export default function HomeView() {
         <ShareYourRecipe />
         <RecipeGridSection feedType="trending" />
         <BlogGridSection />
+        <CookbookGridSection />
         <RecipeGridSection feedType="new" />
       </div>
 

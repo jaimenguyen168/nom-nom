@@ -204,21 +204,31 @@ export const cookbookReviews = pgTable(
 
 // ── Zod Schema ────────────────────────────────────────────────────────────────
 
-export const createCookbookSchema = z.object({
-  title: z.string().min(1, "Title is required").max(255),
-  description: z.string().optional(),
-  coverImageUrl: z.string().optional(),
-  bannerImageUrl: z.string().optional(),
-  cuisine: z.string().optional(),
-  difficulty: z.enum(["beginner", "intermediate", "advanced"]).optional(),
-  servingsRange: z.string().optional(),
-  language: z.string().optional(),
-  edition: z.string().optional(),
-  isFree: z.boolean(),
-  price: z.number().min(0).optional(),
-  currency: z.string(),
-  status: z.enum(["draft", "published", "archived"]),
-  recipeIds: z.array(z.string()).optional(),
-  categoryIds: z.array(z.string()).max(3).optional(),
-  tags: z.array(z.string()).optional(),
-});
+export const createCookbookSchema = z
+  .object({
+    title: z.string().min(1, "Title is required").max(255),
+    description: z.string().optional(),
+    coverImageUrl: z.string().optional(),
+    bannerImageUrl: z.string().optional(),
+    cuisine: z.string().optional(),
+    difficulty: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+    servingsRange: z.string().optional(),
+    language: z.string().optional(),
+    edition: z.string().optional(),
+    isFree: z.boolean(),
+    price: z.number().min(0.01, "Price must be greater than 0").optional(),
+    currency: z.string(),
+    status: z.enum(["draft", "published", "archived"]),
+    recipeIds: z.array(z.string()).optional(),
+    categoryIds: z.array(z.string()).max(3).optional(),
+    tags: z.array(z.string()).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.isFree && (!data.price || data.price <= 0)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Price is required for paid cookbooks",
+        path: ["price"],
+      });
+    }
+  });
