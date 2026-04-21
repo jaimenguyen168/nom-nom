@@ -43,12 +43,20 @@ export const useGetBlogs = (
   );
 };
 
-export const useGetUserBlogReview = (blogId: string) => {
+export const useIsSavedBlog = (blogId: string) => {
   const trpc = useTRPC();
   const { isSignedIn } = useAuth();
   return useQuery({
-    ...trpc.blogReviews.getUserReview.queryOptions({ blogId }),
+    ...trpc.blogs.isSaved.queryOptions({ blogId }),
     enabled: !!isSignedIn && !!blogId,
+  });
+};
+
+export const useBlogSavesCount = (blogId: string) => {
+  const trpc = useTRPC();
+  return useQuery({
+    ...trpc.blogs.savesCount.queryOptions({ blogId }),
+    enabled: !!blogId,
   });
 };
 
