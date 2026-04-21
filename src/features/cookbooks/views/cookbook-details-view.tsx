@@ -19,6 +19,7 @@ import {
   Users,
   Lock,
   Bookmark,
+  EditIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -165,6 +166,20 @@ export default function CookbookDetailsView({ slug }: Props) {
               )}
             />
             {isSaved ? "Saved" : "Save Cookbook"}
+          </button>
+        )}
+
+        {isOwner && (
+          <button
+            onClick={() =>
+              router.push(
+                `/${cookbook.username}/cookbooks/${cookbook.slug}/edit`,
+              )
+            }
+            className="flex items-center gap-1.5 text-sm text-white hover:text-white transition-colors px-3 py-1.5 bg-primary-200 rounded-md  absolute top-4 right-4"
+          >
+            <EditIcon className="size-4" />
+            Edit
           </button>
         )}
       </div>

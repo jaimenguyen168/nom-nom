@@ -87,6 +87,7 @@ function EditRecipeForm({
   const instructions = data.instructions;
   const nutrition = data.nutrition;
   const tags = data.tags;
+  const categoriesData = data.categories;
   const updateRecipe = useUpdateRecipe(username, recipeSlug);
 
   const path = `/${username}/recipes?recipeSlug=${recipeSlug}`;
@@ -157,7 +158,7 @@ function EditRecipeForm({
       })),
       tags: tags.map((t) => t.name),
       isPublic: recipe.isPublic ?? false,
-      categoryIds: [],
+      categoryIds: categoriesData.map((c) => c.categoryId),
     },
   });
 

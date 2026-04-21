@@ -117,6 +117,7 @@ function EditBlogForm({
 
   const blog = data.blogs;
   const tags = data.tags;
+  const categoriesData = data.categories;
 
   const path = `/${username}/blogs?blogSlug=${blogSlug}`;
 
@@ -162,7 +163,7 @@ function EditBlogForm({
       ],
       status: blog.status ?? "draft",
       tags: tags.map((t) => ({ name: t.name })),
-      categoryIds: [],
+      categoryIds: categoriesData.map((c) => c.categoryId),
     },
   });
 

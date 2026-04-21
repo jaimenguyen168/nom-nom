@@ -441,4 +441,205 @@ export const cookbooksRouter = createTRPCRouter({
 
       return { isSaved: true };
     }),
+
+  getByUsernameAndSlug: publicProcedure
+    .input(z.object({ username: z.string(), slug: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const user = await nomnomDb
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, input.username))
+        .then((rows) => rows[0]);
+
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      const cookbook = await nomnomDb
+        .select({
+          id: cookbooks.id,
+          title: cookbooks.title,
+          slug: cookbooks.slug,
+          description: cookbooks.description,
+          coverImageUrl: cookbooks.coverImageUrl,
+          bannerImageUrl: cookbooks.bannerImageUrl,
+          cuisine: cookbooks.cuisine,
+          difficulty: cookbooks.difficulty,
+          servingsRange: cookbooks.servingsRange,
+          language: cookbooks.language,
+          edition: cookbooks.edition,
+          isFree: cookbooks.isFree,
+          price: cookbooks.price,
+          currency: cookbooks.currency,
+          status: cookbooks.status,
+          authorId: cookbooks.authorId,
+          createdAt: cookbooks.createdAt,
+          updatedAt: cookbooks.updatedAt,
+        })
+        .from(cookbooks)
+        .where(
+          and(eq(cookbooks.authorId, user.id), eq(cookbooks.slug, input.slug)),
+        )
+        .then((rows) => rows[0]);
+
+      if (!cookbook) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Cookbook not found",
+        });
+      }
+
+      const isOwner = ctx.userId === cookbook.authorId;
+
+      if (cookbook.status !== "published" && !isOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Cookbook not found",
+        });
+      }
+
+      const [tags, cookbookRecipesData, categories] = await Promise.all([
+        nomnomDb
+          .select({ name: cookbookTags.name })
+          .from(cookbookTags)
+          .where(eq(cookbookTags.cookbookId, cookbook.id)),
+
+        nomnomDb
+          .select({ recipeId: cookbookRecipes.recipeId })
+          .from(cookbookRecipes)
+          .where(eq(cookbookRecipes.cookbookId, cookbook.id))
+          .orderBy(cookbookRecipes.orderIndex),
+
+        nomnomDb
+          .select({ categoryId: cookbookCategories.categoryId })
+          .from(cookbookCategories)
+          .where(eq(cookbookCategories.cookbookId, cookbook.id)),
+      ]);
+
+      return {
+        ...cookbook,
+        tags: tags.map((t) => t.name),
+        recipeIds: cookbookRecipesData.map((r) => r.recipeId),
+        categoryIds: categories.map((c) => c.categoryId),
+      };
+    }),
+
+  update: authProcedure
+    .input(createCookbookSchema.extend({ cookbookId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await nomnomDb
+        .select()
+        .from(cookbooks)
+        .where(
+          and(
+            eq(cookbooks.id, input.cookbookId),
+            eq(cookbooks.authorId, ctx.userId),
+          ),
+        )
+        .then((rows) => rows[0]);
+
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Cookbook not found",
+        });
+      }
+
+      await nomnomDb
+        .update(cookbooks)
+        .set({
+          title: input.title,
+          description: input.description,
+          coverImageUrl: input.coverImageUrl,
+          bannerImageUrl: input.bannerImageUrl,
+          cuisine: input.cuisine,
+          difficulty: input.difficulty,
+          servingsRange: input.servingsRange,
+          language: input.language,
+          edition: input.edition,
+          isFree: input.isFree,
+          price:
+            input.price != null && input.price > 0
+              ? input.price.toString()
+              : null,
+          currency: input.currency,
+          status: input.status,
+          publishedAt:
+            input.status === "published" && !existing.publishedAt
+              ? new Date()
+              : existing.publishedAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(cookbooks.id, input.cookbookId));
+
+      await Promise.all([
+        nomnomDb
+          .delete(cookbookRecipes)
+          .where(eq(cookbookRecipes.cookbookId, input.cookbookId)),
+        nomnomDb
+          .delete(cookbookCategories)
+          .where(eq(cookbookCategories.cookbookId, input.cookbookId)),
+        nomnomDb
+          .delete(cookbookTags)
+          .where(eq(cookbookTags.cookbookId, input.cookbookId)),
+      ]);
+
+      await Promise.all([
+        input.recipeIds &&
+          input.recipeIds.length > 0 &&
+          nomnomDb.insert(cookbookRecipes).values(
+            input.recipeIds.map((recipeId, index) => ({
+              cookbookId: input.cookbookId,
+              recipeId,
+              orderIndex: index,
+            })),
+          ),
+        input.categoryIds &&
+          input.categoryIds.length > 0 &&
+          nomnomDb.insert(cookbookCategories).values(
+            input.categoryIds.map((categoryId) => ({
+              cookbookId: input.cookbookId,
+              categoryId,
+            })),
+          ),
+        input.tags &&
+          input.tags.length > 0 &&
+          nomnomDb.insert(cookbookTags).values(
+            input.tags.map((name) => ({
+              cookbookId: input.cookbookId,
+              name: name.toLowerCase().trim(),
+            })),
+          ),
+      ]);
+
+      return { slug: existing.slug };
+    }),
+
+  delete: authProcedure
+    .input(z.object({ cookbookId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await nomnomDb
+        .select()
+        .from(cookbooks)
+        .where(
+          and(
+            eq(cookbooks.id, input.cookbookId),
+            eq(cookbooks.authorId, ctx.userId),
+          ),
+        )
+        .then((rows) => rows[0]);
+
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Cookbook not found",
+        });
+      }
+
+      await nomnomDb
+        .delete(cookbooks)
+        .where(eq(cookbooks.id, input.cookbookId));
+
+      return { success: true };
+    }),
 });

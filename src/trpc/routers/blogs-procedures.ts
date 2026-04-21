@@ -112,12 +112,15 @@ export const blogsRouter = createTRPCRouter({
 
       const blogId = result.blogs.id;
 
-      const tags = await nomnomDb
-        .select()
-        .from(blogTags)
-        .where(eq(blogTags.blogId, blogId));
+      const [tags, categories] = await Promise.all([
+        nomnomDb.select().from(blogTags).where(eq(blogTags.blogId, blogId)),
+        nomnomDb
+          .select({ categoryId: blogCategories.categoryId })
+          .from(blogCategories)
+          .where(eq(blogCategories.blogId, blogId)),
+      ]);
 
-      return { ...result, tags };
+      return { ...result, tags, categories };
     }),
 
   getMany: publicProcedure

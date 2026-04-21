@@ -71,3 +71,48 @@ export const useToggleSaveCookbook = (slug: string) => {
     }),
   );
 };
+
+export const useGetCookbookByUsernameAndSlug = (
+  username: string,
+  slug: string,
+) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery({
+    ...trpc.cookbooks.getByUsernameAndSlug.queryOptions({ username, slug }),
+    retry: false,
+  });
+};
+
+export const useUpdateCookbook = (username: string, slug: string) => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    trpc.cookbooks.update.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.cookbooks.getByUsernameAndSlug.queryOptions({ username, slug }),
+        );
+        queryClient.invalidateQueries(
+          trpc.cookbooks.getManyByUser.queryOptions({}),
+        );
+      },
+    }),
+  );
+};
+
+export const useDeleteCookbook = () => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    trpc.cookbooks.delete.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.cookbooks.getManyByUser.queryOptions({}),
+        );
+        queryClient.invalidateQueries(trpc.cookbooks.getMany.queryOptions({}));
+      },
+    }),
+  );
+};
