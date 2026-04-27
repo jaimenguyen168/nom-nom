@@ -13,6 +13,12 @@ import {
   recipeTags,
   userSavedRecipes,
 } from "@/db/schemas/recipes";
+import {
+  cookbooks,
+  cookbookRecipes,
+  cookbookPurchases,
+  userSavedCookbooks,
+} from "@/db/schemas/cookbooks";
 import { nomnomDb } from "@/db";
 import { slugify } from "@/lib/utils";
 import { users } from "@/db/schemas/users";
@@ -231,7 +237,56 @@ export const recipesRouter = createTRPCRouter({
       const isOwner = ctx.userId === result.recipes.userId;
 
       if (!result.recipes.isPublic && !isOwner) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+        // Allow access if the recipe is inside a cookbook the user has purchased
+        // or a free cookbook the user has saved
+        let hasCookbookAccess = false;
+
+        if (ctx.userId) {
+          const [purchasedRow, savedFreeRow] = await Promise.all([
+            // Purchased paid cookbook containing this recipe
+            nomnomDb
+              .select({ id: cookbookPurchases.id })
+              .from(cookbookPurchases)
+              .innerJoin(
+                cookbookRecipes,
+                eq(cookbookRecipes.cookbookId, cookbookPurchases.cookbookId),
+              )
+              .where(
+                and(
+                  eq(cookbookPurchases.userId, ctx.userId),
+                  eq(cookbookRecipes.recipeId, result.recipes.id),
+                ),
+              )
+              .then((rows) => rows[0]),
+
+            // Saved free cookbook containing this recipe
+            nomnomDb
+              .select({ id: userSavedCookbooks.id })
+              .from(userSavedCookbooks)
+              .innerJoin(
+                cookbooks,
+                eq(cookbooks.id, userSavedCookbooks.cookbookId),
+              )
+              .innerJoin(
+                cookbookRecipes,
+                eq(cookbookRecipes.cookbookId, cookbooks.id),
+              )
+              .where(
+                and(
+                  eq(userSavedCookbooks.userId, ctx.userId),
+                  eq(cookbookRecipes.recipeId, result.recipes.id),
+                  eq(cookbooks.isFree, true),
+                ),
+              )
+              .then((rows) => rows[0]),
+          ]);
+
+          hasCookbookAccess = !!(purchasedRow || savedFreeRow);
+        }
+
+        if (!hasCookbookAccess) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+        }
       }
 
       const recipeId = result.recipes.id;
