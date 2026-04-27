@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   useGetCookbookBySlug,
   useToggleSaveCookbook,
+  useCreateCheckoutSession,
 } from "@/hooks/trpcHooks/use-cookbooks";
+import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 import { useGetRecipeBySlug } from "@/hooks/trpcHooks/use-recipes";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -45,8 +47,25 @@ export default function CookbookDetailsView({ slug }: Props) {
   const router = useRouter();
 
   const toggleSave = useToggleSaveCookbook(slug);
+  const checkout = useCreateCheckoutSession();
+  const { data: currentUser } = useGetCurrentUser();
   const isSaved = cookbook.isSaved ?? false;
   const isOwner = userId === cookbook.authorId;
+
+  // If user already purchased this paid cookbook, redirect them to their saved library
+  useEffect(() => {
+    if (!cookbook.isFree && cookbook.hasPurchased && !isOwner && currentUser?.username) {
+      router.replace(`/${currentUser.username}/cookbooks/saved?cookbookSlug=${slug}`);
+    }
+  }, [cookbook.isFree, cookbook.hasPurchased, isOwner, currentUser?.username, slug, router]);
+
+  const handlePurchase = () => {
+    if (!userId) { router.push("/sign-in"); return; }
+    checkout.mutate(
+      { cookbookSlug: slug },
+      { onSuccess: ({ url }) => { if (url) window.location.href = url; } },
+    );
+  };
 
   const recipes = cookbook.recipes ?? [];
   const activeRecipe = recipes[activeRecipeIndex];
@@ -236,10 +255,15 @@ export default function CookbookDetailsView({ slug }: Props) {
                       {cookbook.currency} {cookbook.price}
                     </p>
                     <Button
-                      onClick={() => !userId && router.push("/sign-in")}
+                      onClick={handlePurchase}
+                      disabled={checkout.isPending}
                       className="px-8 bg-primary-200 hover:bg-primary-300 text-white"
                     >
-                      {userId ? "Purchase Cookbook" : "Sign in to Purchase"}
+                      {checkout.isPending
+                        ? "Redirecting..."
+                        : userId
+                          ? "Purchase Cookbook"
+                          : "Sign in to Purchase"}
                     </Button>
                     <p className="text-xs text-gray-400">One-time purchase</p>
                   </>

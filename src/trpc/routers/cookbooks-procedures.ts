@@ -1,6 +1,7 @@
 import { authProcedure, createTRPCRouter, publicProcedure } from "@/trpc/init";
 import { z } from "zod";
 import { nomnomDb } from "@/db";
+import { stripe } from "@/lib/stripe";
 import {
   cookbooks,
   cookbookRecipes,
@@ -641,5 +642,81 @@ export const cookbooksRouter = createTRPCRouter({
         .where(eq(cookbooks.id, input.cookbookId));
 
       return { success: true };
+    }),
+
+  createCheckoutSession: authProcedure
+    .input(z.object({ cookbookSlug: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Fetch the cookbook
+      const cookbook = await nomnomDb
+        .select()
+        .from(cookbooks)
+        .where(eq(cookbooks.slug, input.cookbookSlug))
+        .then((rows) => rows[0]);
+
+      if (!cookbook) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Cookbook not found" });
+      }
+
+      if (cookbook.isFree || !cookbook.price) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "This cookbook is free" });
+      }
+
+      if (cookbook.authorId === ctx.userId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "You cannot buy your own cookbook" });
+      }
+
+      // Check if already purchased
+      const existing = await nomnomDb
+        .select()
+        .from(cookbookPurchases)
+        .where(
+          and(
+            eq(cookbookPurchases.cookbookId, cookbook.id),
+            eq(cookbookPurchases.userId, ctx.userId),
+          ),
+        )
+        .then((rows) => rows[0]);
+
+      if (existing) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "You already own this cookbook" });
+      }
+
+      const buyer = await nomnomDb
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, ctx.userId))
+        .then((rows) => rows[0]);
+
+      const priceInCents = Math.round(parseFloat(cookbook.price) * 100);
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: cookbook.currency?.toLowerCase() ?? "usd",
+              product_data: {
+                name: cookbook.title,
+                description: cookbook.description ?? undefined,
+                images: cookbook.coverImageUrl ? [cookbook.coverImageUrl] : [],
+              },
+              unit_amount: priceInCents,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        success_url: `${process.env.APP_URL}/${buyer.username}/cookbooks/saved?cookbookSlug=${cookbook.slug}`,
+        cancel_url: `${process.env.APP_URL}/cookbooks/${cookbook.slug}`,
+        metadata: {
+          cookbookId: cookbook.id,
+          userId: ctx.userId,
+          pricePaid: cookbook.price,
+          currency: cookbook.currency ?? "USD",
+        },
+      });
+
+      return { url: session.url };
     }),
 });

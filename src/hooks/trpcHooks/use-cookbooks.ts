@@ -116,3 +116,9 @@ export const useDeleteCookbook = () => {
     }),
   );
 };
+
+
+export const useCreateCheckoutSession = () => {
+  const trpc = useTRPC();
+  return useMutation(trpc.cookbooks.createCheckoutSession.mutationOptions());
+};
