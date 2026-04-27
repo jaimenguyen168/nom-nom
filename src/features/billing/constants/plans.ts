@@ -1,4 +1,3 @@
-export type PlanId = "free" | "starter" | "pro" | "premium";
 export type BillingInterval = "monthly" | "yearly";
 
 export type PlanFeature = {
@@ -7,10 +6,12 @@ export type PlanFeature = {
 };
 
 export type Plan = {
-  id: PlanId;
+  id: string;
+  clerkPlanSlug?: string;
   name: string;
   tagline: string;
   price: Record<BillingInterval, number>;
+  yearlyTotal?: number;
   highlighted?: boolean;
   ctaLabel: string;
   limits: {
@@ -38,10 +39,12 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    id: "starter",
+    id: "cplan_3CuYMrcRAsVR1YyOG3CgZ1CwiHb",
+    clerkPlanSlug: "starter",
     name: "Starter",
     tagline: "For weekend chefs.",
     price: { monthly: 6, yearly: 5 },
+    yearlyTotal: 60,
     ctaLabel: "Upgrade to Starter",
     limits: { aiRecipesPerMonth: 25, aiBlogsPerMonth: 10 },
     features: [
@@ -54,10 +57,12 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    id: "pro",
+    id: "cplan_3CuYnl4de0eiybgIEtnu781JoyZ",
+    clerkPlanSlug: "pro",
     name: "Pro",
     tagline: "For serious home cooks.",
     price: { monthly: 15, yearly: 12 },
+    yearlyTotal: 144,
     highlighted: true,
     ctaLabel: "Go Pro",
     limits: { aiRecipesPerMonth: 100, aiBlogsPerMonth: 50 },
@@ -71,10 +76,12 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    id: "premium",
+    id: "cplan_3CuZ0lNgeLbGcva4h4Z6XKo09OC",
+    clerkPlanSlug: "premium",
     name: "Premium",
     tagline: "Cook like a pro.",
     price: { monthly: 29, yearly: 24 },
+    yearlyTotal: 288,
     ctaLabel: "Go Premium",
     limits: { aiRecipesPerMonth: null, aiBlogsPerMonth: null },
     features: [
@@ -88,9 +95,9 @@ export const PLANS: Plan[] = [
   },
 ];
 
-export const DEFAULT_PLAN: PlanId = "free";
+export const DEFAULT_PLAN = "free";
 
-export const getPlan = (id: PlanId): Plan =>
+export const getPlan = (id: string): Plan =>
   PLANS.find((p) => p.id === id) ?? PLANS[0];
 
 export const formatLimit = (limit: number | null) =>

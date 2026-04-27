@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import AppTitle from "@/components/app-title";
 import { useCreateBlogWithAgent } from "@/hooks/trpcHooks/use-blogs-agent";
+import { handleAgentError } from "@/features/billing/lib/handle-limit-error";
 
 const EXAMPLE_PROMPTS = [
   "The ultimate guide to homemade pasta",
@@ -42,8 +43,11 @@ export default function CreateBlogWithAgentView({
           setPrompt("");
           router.push(`/${username}/blogs`);
         },
-        onError: () => {
-          toast.error("Failed to start blog generation");
+        onError: (error) => {
+          handleAgentError(error, {
+            fallbackMessage: "Failed to start blog generation",
+            onUpgrade: () => router.push("/pricing"),
+          });
         },
       },
     );

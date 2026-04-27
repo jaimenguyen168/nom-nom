@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { SparklesIcon } from "lucide-react";
+import Link from "next/link";
 import PinkGradientShape from "@/features/home/components/pink-gradient-shape";
 import PlanCard from "@/features/billing/components/plan-card";
 import BillingToggle from "@/features/billing/components/billing-toggle";
@@ -10,13 +11,17 @@ import {
   PLANS,
   type BillingInterval,
 } from "@/features/billing/constants/plans";
-import Link from "next/link";
+import { useClerkBilling } from "@/features/billing/hooks/use-clerk-billing";
+import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
 const PricingView = () => {
   const [interval, setInterval] = useState<BillingInterval>("monthly");
+  const { planId, isLoading } = useClerkBilling();
+  const { data: user } = useGetCurrentUser();
+  const billingHref = user?.username ? `/${user.username}/billing` : "/sign-in";
 
   return (
-    <div className="flex-col flex justify-center items-center overflow-y-auto overflow-x-hidden">
+    <div className="flex-col flex justify-center items-center">
       <PinkGradientShape />
 
       <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16 flex flex-col gap-16 w-full">
@@ -44,7 +49,12 @@ const PricingView = () => {
         {/* Plans */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 z-20">
           {PLANS.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} interval={interval} />
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              interval={interval}
+              isCurrentPlan={!isLoading && planId === plan.id}
+            />
           ))}
         </section>
 
@@ -62,7 +72,7 @@ const PricingView = () => {
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500">Already a member?</span>
             <Link
-              href="/billing"
+              href={billingHref}
               className="text-primary-300 font-semibold hover:text-primary-400"
             >
               Manage your plan →

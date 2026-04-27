@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import AppTitle from "@/components/app-title";
 import { EXAMPLE_PROMPTS } from "@/features/recipes/constants";
 import { useCreateRecipeWithAgent } from "@/hooks/trpcHooks/use-recipes-agent";
+import { handleAgentError } from "@/features/billing/lib/handle-limit-error";
 
 export default function CreateRecipeWithAgentView({
   username,
@@ -35,8 +36,11 @@ export default function CreateRecipeWithAgentView({
           setPrompt("");
           router.push(`/${username}/recipes`);
         },
-        onError: () => {
-          toast.error("Failed to start recipe generation");
+        onError: (error) => {
+          handleAgentError(error, {
+            fallbackMessage: "Failed to start recipe generation",
+            onUpgrade: () => router.push("/pricing"),
+          });
         },
       },
     );

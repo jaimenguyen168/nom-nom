@@ -84,7 +84,7 @@ const UserAuthButton = () => {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/billing" className="w-full">
+          <Link href={`/${currentUser?.username}/billing`} className="w-full">
             Billing & Plan{" "}
             <CreditCardIcon className="ml-auto text-primary-200" />
           </Link>

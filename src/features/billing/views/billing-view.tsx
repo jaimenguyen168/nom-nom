@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import {
   ChefHatIcon,
@@ -10,6 +10,8 @@ import {
   CheckIcon,
   SparklesIcon,
 } from "lucide-react";
+import { useClerk } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -22,44 +24,53 @@ import {
 } from "@/components/ui/breadcrumb";
 import AppTitle from "@/components/app-title";
 import UsageMeter from "@/features/billing/components/usage-meter";
-import {
-  PLANS,
-  DEFAULT_PLAN,
-  getPlan,
-  type PlanId,
-} from "@/features/billing/constants/plans";
+import { startOfMonth, addMonths, format } from "date-fns";
+import { PLANS, getPlan } from "@/features/billing/constants/plans";
+import { useClerkBilling } from "@/features/billing/hooks/use-clerk-billing";
 import { cn } from "@/lib/utils";
+import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
 type BillingViewProps = {
-  currentPlanId?: PlanId;
+  initialPlanId?: string;
   usage?: { aiRecipes: number; aiBlogs: number };
-  renewalDate?: Date | null;
 };
 
 const BillingView = ({
-  currentPlanId = DEFAULT_PLAN,
+  initialPlanId = "free",
   usage = { aiRecipes: 0, aiBlogs: 0 },
-  renewalDate = null,
 }: BillingViewProps) => {
-  const currentPlan = getPlan(currentPlanId);
-  const isFree = currentPlan.id === "free";
+  const clerk = useClerk();
+  const router = useRouter();
+  const { data: currentUser } = useGetCurrentUser();
+  const { planId, currentPlan, isFree, isLoading } = useClerkBilling();
 
-  const renewalLabel = renewalDate
-    ? renewalDate.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : isFree
-      ? "Free forever"
-      : "—";
+  const activePlanId = isLoading ? initialPlanId : planId;
+  const activePlan = isLoading ? getPlan(initialPlanId) : currentPlan;
+
+  useEffect(() => {
+    clerk.session?.reload().then(() => router.refresh());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleManageSubscription = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (clerk as any).__internal_openSubscriptionDetails({});
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16 space-y-8 pt-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/">Home</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link href="/">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/${currentUser?.username}/profile`}>Profile</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -80,30 +91,34 @@ const BillingView = ({
               </p>
               <div className="flex items-center gap-3">
                 <h2 className="text-3xl font-bold text-gray-900">
-                  {currentPlan.name}
+                  {activePlan.name}
                 </h2>
-                {currentPlan.highlighted && (
+                {activePlan.highlighted && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary-200 px-2 py-0.5 text-[10px] font-bold text-white">
                     <SparklesIcon className="size-3" />
                     POPULAR
                   </span>
                 )}
               </div>
-              <p className="text-gray-500 text-sm">{currentPlan.tagline}</p>
+              <p className="text-gray-500 text-sm">{activePlan.tagline}</p>
 
               <div className="flex items-center gap-2 text-sm text-gray-500 pt-2">
                 <CalendarIcon className="size-4" />
                 <span>
-                  {isFree ? "Status:" : "Renews:"}{" "}
+                  {isFree ? "Status:" : "Plan:"}{" "}
                   <span className="font-semibold text-gray-700">
-                    {renewalLabel}
+                    {isLoading
+                      ? "Loading…"
+                      : isFree
+                        ? "Free forever"
+                        : "Active"}
                   </span>
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              {isFree ? (
+              {!isLoading && isFree ? (
                 <Link href="/pricing">
                   <Button className="bg-primary-300 hover:bg-primary-400 text-white font-semibold px-6 py-5 shadow-md shadow-white">
                     Upgrade plan
@@ -120,9 +135,9 @@ const BillingView = ({
                     </Button>
                   </Link>
                   <Button
+                    onClick={handleManageSubscription}
+                    disabled={isLoading}
                     className="bg-primary-300 hover:bg-primary-400 text-white font-semibold px-6 py-5 shadow-md shadow-white"
-                    // TODO: wire up to Clerk Billing portal
-                    disabled
                   >
                     Manage subscription
                     <ExternalLinkIcon className="size-4 ml-1" />
@@ -138,16 +153,19 @@ const BillingView = ({
           <div className="flex items-end justify-between gap-3 flex-wrap">
             <div>
               <h3 className="text-xl font-semibold text-gray-900">
-                Usage this month
+                Usage this cycle
               </h3>
               <p className="text-sm text-gray-500">
-                Resets at the start of every billing cycle.
+                Resets on{" "}
+                <span className="font-medium text-gray-700">
+                  {format(startOfMonth(addMonths(new Date(), 1)), "MMM d, yyyy")}
+                </span>
               </p>
             </div>
             <p className="text-xs text-gray-400">
               Limits set by{" "}
               <span className="font-semibold text-primary-300">
-                {currentPlan.name}
+                {activePlan.name}
               </span>{" "}
               plan
             </p>
@@ -159,20 +177,20 @@ const BillingView = ({
               label="Recipe inspirations"
               description="Spark new recipes from prompts or photos"
               used={usage.aiRecipes}
-              limit={currentPlan.limits.aiRecipesPerMonth}
+              limit={activePlan.limits.aiRecipesPerMonth}
             />
             <UsageMeter
               icon={PenLineIcon}
               label="Blog inspirations"
               description="Draft posts in your voice"
               used={usage.aiBlogs}
-              limit={currentPlan.limits.aiBlogsPerMonth}
+              limit={activePlan.limits.aiBlogsPerMonth}
             />
           </div>
         </Card>
 
         {/* Plan comparison teaser */}
-        {!currentPlan.highlighted && (
+        {!activePlan.highlighted && (
           <Card className="p-6 md:p-8 space-y-6">
             <div>
               <h3 className="text-xl font-semibold text-gray-900">
@@ -185,7 +203,7 @@ const BillingView = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {PLANS.map((plan) => {
-                const isCurrent = plan.id === currentPlan.id;
+                const isCurrent = plan.id === activePlanId;
                 return (
                   <div
                     key={plan.id}

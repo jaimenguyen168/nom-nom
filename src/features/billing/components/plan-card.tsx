@@ -2,35 +2,81 @@
 
 import React from "react";
 import Link from "next/link";
-import { CheckIcon, XIcon, SparklesIcon } from "lucide-react";
+import { CheckIcon, XIcon, SparklesIcon, CheckCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Show, useUser } from "@clerk/nextjs";
+import { CheckoutButton } from "@clerk/nextjs/experimental";
 import { cn } from "@/lib/utils";
 import {
   type BillingInterval,
   type Plan,
 } from "@/features/billing/constants/plans";
+import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
 type PlanCardProps = {
   plan: Plan;
   interval: BillingInterval;
-  href?: string;
-  ctaLabel?: string;
-  ctaDisabled?: boolean;
+  /** Highlight this card as the user's active plan */
+  isCurrentPlan?: boolean;
 };
 
-const PlanCard = ({
-  plan,
-  interval,
-  href,
-  ctaLabel,
-  ctaDisabled,
-}: PlanCardProps) => {
+const PlanCard = ({ plan, interval, isCurrentPlan = false }: PlanCardProps) => {
+  const { data: user } = useGetCurrentUser();
   const isFree = plan.id === "free";
   const price = plan.price[interval];
-  const fallbackHref = isFree ? "/sign-up" : `/billing?plan=${plan.id}`;
-  const finalHref = href ?? fallbackHref;
-  const finalLabel = ctaLabel ?? plan.ctaLabel;
+  const clerkPeriod = interval === "yearly" ? "annual" : "month";
+  const billingHref = user?.username ? `/${user.username}/billing` : "/sign-in";
+
+  const renderCta = () => {
+    if (isCurrentPlan) {
+      return (
+        <Button
+          disabled
+          className="w-full font-semibold py-6 text-base bg-gray-100 text-gray-400 cursor-not-allowed"
+        >
+          <CheckCircleIcon className="size-4 mr-2" />
+          Current plan
+        </Button>
+      );
+    }
+
+    if (isFree) {
+      return (
+        <Link href="/sign-up">
+          <Button
+            className={cn(
+              "w-full font-semibold py-6 text-base shadow-md shadow-white",
+              "bg-white hover:bg-primary-100 text-primary-300 border border-primary-200",
+            )}
+          >
+            {plan.ctaLabel}
+          </Button>
+        </Link>
+      );
+    }
+
+    return (
+      <Show when="signed-in">
+        <CheckoutButton
+          planId={plan.id!}
+          planPeriod={clerkPeriod}
+          newSubscriptionRedirectUrl={billingHref}
+        >
+          <button
+            className={cn(
+              "w-full font-semibold py-3 text-base shadow-md shadow-white rounded-md",
+              plan.highlighted
+                ? "bg-primary-300 hover:bg-primary-400 text-white"
+                : "bg-primary-200 hover:bg-primary-300 text-white",
+            )}
+          >
+            {plan.ctaLabel}
+          </button>
+        </CheckoutButton>
+      </Show>
+    );
+  };
 
   return (
     <Card
@@ -39,12 +85,20 @@ const PlanCard = ({
         plan.highlighted
           ? "border-primary-200 shadow-lg shadow-primary-100 -translate-y-2 bg-white"
           : "border-gray-100 hover:shadow-md hover:-translate-y-1 bg-white",
+        isCurrentPlan && "ring-2 ring-primary-200",
       )}
     >
-      {plan.highlighted && (
+      {plan.highlighted && !isCurrentPlan && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-primary-200 px-3 py-1 text-xs font-semibold text-white shadow-md">
           <SparklesIcon className="size-3" />
           Most popular
+        </div>
+      )}
+
+      {isCurrentPlan && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-primary-300 px-3 py-1 text-xs font-semibold text-white shadow-md">
+          <CheckCircleIcon className="size-3" />
+          Your plan
         </div>
       )}
 
@@ -65,6 +119,11 @@ const PlanCard = ({
         <span className="text-sm text-gray-500">
           {price === 0 ? "forever" : "/ month"}
         </span>
+        {interval === "yearly" && plan.yearlyTotal && (
+          <span className="ml-1 text-xs text-gray-400">
+            (${plan.yearlyTotal}/yr)
+          </span>
+        )}
       </div>
 
       <ul className="flex-1 space-y-3">
@@ -91,21 +150,7 @@ const PlanCard = ({
         ))}
       </ul>
 
-      <Link href={ctaDisabled ? "#" : finalHref} aria-disabled={ctaDisabled}>
-        <Button
-          disabled={ctaDisabled}
-          className={cn(
-            "w-full font-semibold py-6 text-base shadow-md shadow-white",
-            plan.highlighted
-              ? "bg-primary-300 hover:bg-primary-400 text-white"
-              : isFree
-                ? "bg-white hover:bg-primary-100 text-primary-300 border border-primary-200"
-                : "bg-primary-200 hover:bg-primary-300 text-white",
-          )}
-        >
-          {finalLabel}
-        </Button>
-      </Link>
+      {renderCta()}
     </Card>
   );
 };
