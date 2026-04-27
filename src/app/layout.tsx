@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import NavbarHeader from "@/components/navbar-header";
 import { Toaster } from "@/components/ui/sonner";
 import { TRPCReactProvider } from "@/trpc/client";
+import { AgentJobsProvider } from "@/features/billing/contexts/agent-jobs-context";
 
 const roboto = Roboto({
   variable: "--font-sans",
@@ -31,9 +32,11 @@ export default function RootLayout({
           suppressHydrationWarning
         >
           <body className="min-h-screen flex flex-col">
-            <NavbarHeader />
-            <main className="flex-1 flex flex-col">{children}</main>
-            <Toaster />
+            <AgentJobsProvider>
+              <NavbarHeader />
+              <main className="flex-1 flex flex-col">{children}</main>
+              <Toaster />
+            </AgentJobsProvider>
           </body>
         </html>
       </TRPCReactProvider>

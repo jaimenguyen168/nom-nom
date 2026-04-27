@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import AppTitle from "@/components/app-title";
 import { useCreateBlogWithAgent } from "@/hooks/trpcHooks/use-blogs-agent";
-import { handleAgentError } from "@/features/billing/lib/handle-limit-error";
+import { handleAgentError } from "../../billing/components/handle-creating-toast";
+import { useAgentJobs } from "@/features/billing/contexts/agent-jobs-context";
 
 const EXAMPLE_PROMPTS = [
   "The ultimate guide to homemade pasta",
@@ -26,24 +27,29 @@ export default function CreateBlogWithAgentView({
   const [prompt, setPrompt] = useState("");
   const router = useRouter();
   const createBlog = useCreateBlogWithAgent();
+  const { addJob } = useAgentJobs();
+  const submittingRef = useRef(false);
 
   const handleSubmit = () => {
-    if (!prompt.trim()) {
-      toast.error("Please enter a blog prompt");
+    if (submittingRef.current || !prompt.trim()) {
+      if (!prompt.trim()) toast.error("Please enter a blog prompt");
       return;
     }
+
+    submittingRef.current = true;
+    const after = new Date().toISOString();
 
     createBlog.mutate(
       { prompt },
       {
         onSuccess: () => {
-          toast.success(
-            "Your blog post is being generated! Check back in a moment.",
-          );
+          submittingRef.current = false;
           setPrompt("");
+          addJob({ type: "blog", after, username });
           router.push(`/${username}/blogs`);
         },
         onError: (error) => {
+          submittingRef.current = false;
           handleAgentError(error, {
             fallbackMessage: "Failed to start blog generation",
             onUpgrade: () => router.push("/pricing"),
@@ -97,7 +103,7 @@ export default function CreateBlogWithAgentView({
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Generating...
+                  Starting...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
