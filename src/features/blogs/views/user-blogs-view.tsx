@@ -10,7 +10,6 @@ import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import UserBlogCard from "@/features/blogs/components/user-blog-card";
-
 const statusFilters: { label: string; value: BlogStatusFilter }[] = [
   { label: "All", value: "all" },
   { label: "Published", value: "published" },

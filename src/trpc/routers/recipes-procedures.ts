@@ -16,7 +16,7 @@ import {
 import { nomnomDb } from "@/db";
 import { slugify } from "@/lib/utils";
 import { users } from "@/db/schemas/users";
-import { and, asc, avg, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { categories } from "@/db/schemas/categories";
@@ -835,5 +835,26 @@ export const recipesRouter = createTRPCRouter({
       await nomnomDb.delete(recipes).where(eq(recipes.id, input.recipeId));
 
       return { success: true };
+    }),
+
+  /**
+   * Polls for the first recipe created after a given timestamp.
+   * Used by the AI generation view to detect when Inngest has finished.
+   */
+  getLatestCreatedAfter: authProcedure
+    .input(z.object({ after: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const rows = await nomnomDb
+        .select({ slug: recipes.slug, title: recipes.title })
+        .from(recipes)
+        .where(
+          and(
+            eq(recipes.userId, ctx.userId),
+            gt(recipes.createdAt, new Date(input.after)),
+          ),
+        )
+        .orderBy(desc(recipes.createdAt))
+        .limit(1);
+      return rows[0] ?? null;
     }),
 });

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormControl,
@@ -38,6 +39,10 @@ import {
   BookOpenIcon,
   BookmarkIcon,
   ChefHatIcon,
+  CreditCardIcon,
+  ZapIcon,
+  SparklesIcon,
+  CrownIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,6 +53,8 @@ import {
   useGetCurrentUser,
   useUpdateProfile,
 } from "@/hooks/trpcHooks/use-users";
+import { useClerkBilling } from "@/features/billing/hooks/use-clerk-billing";
+import Link from "next/link";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -60,6 +67,7 @@ type ProfileForm = z.infer<typeof profileSchema>;
 
 export default function ProfileView() {
   const { data: currentUser } = useGetCurrentUser();
+  const { currentPlan } = useClerkBilling();
   const updateProfile = useUpdateProfile();
   const { signOut } = useClerk();
   const router = useRouter();
@@ -138,7 +146,9 @@ export default function ProfileView() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/">Home</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link href="/">Home</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -196,6 +206,12 @@ export default function ProfileView() {
               />
             </div>
           )}
+
+          {/* Plan badge */}
+          <PlanBadge
+            planId={currentPlan?.clerkPlanSlug ?? "free"}
+            planName={currentPlan?.name ?? "Free"}
+          />
 
           {/* Stats */}
           <div className="flex items-center gap-8 text-center">
@@ -398,6 +414,12 @@ export default function ProfileView() {
             description="Cookbooks you saved"
             icon={LibraryIcon}
           />
+          <ActivityCard
+            href={`/${currentUser.username}/billing`}
+            title="Billing & Plan"
+            description="Manage your subscription"
+            icon={CreditCardIcon}
+          />
         </div>
 
         {/* Sign Out */}
@@ -443,5 +465,43 @@ const ActivityCard = ({
         <Icon className="w-6 h-6 text-gray-400" />
       </div>
     </Card>
+  );
+};
+
+const planConfig: Record<string, { className: string; icon: React.ReactNode }> =
+  {
+    free: {
+      className: "bg-gray-100 text-gray-500 border-gray-200",
+      icon: null,
+    },
+    starter: {
+      className: "bg-primary-100 text-primary-300 border-primary-200",
+      icon: <ZapIcon className="size-3" />,
+    },
+    pro: {
+      className: "bg-primary-200 text-white border-primary-200",
+      icon: <SparklesIcon className="size-3" />,
+    },
+    premium: {
+      className: "bg-primary-300 text-white border-primary-300",
+      icon: <CrownIcon className="size-3" />,
+    },
+  };
+
+const PlanBadge = ({
+  planId,
+  planName,
+}: {
+  planId: string;
+  planName: string;
+}) => {
+  const config = planConfig[planId] ?? planConfig.free;
+  return (
+    <Badge
+      className={`gap-1.5 px-3 py-1 text-xs font-semibold ${config.className}`}
+    >
+      {config.icon}
+      {planName}
+    </Badge>
   );
 };

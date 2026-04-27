@@ -127,6 +127,14 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Force Clerk's checkout/modal sheet above all page content */
+#clerk-components,
+[id^="clerk"],
+[class^="cl-"],
+[class*=" cl-"] {
+  z-index: 99999 !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

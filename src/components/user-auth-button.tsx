@@ -17,15 +17,16 @@ import {
   ClipboardPenLineIcon,
   ChevronRightIcon,
   BookIcon,
+  CreditCardIcon,
 } from "lucide-react";
 import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 
 const UserAuthButton = () => {
   const { signOut } = useClerk();
   const { user, isLoaded } = useUser();
-  const { data: currentUser } = useGetCurrentUser();
+  const { data: currentUser, isLoading } = useGetCurrentUser();
 
-  if (!isLoaded) {
+  if (!isLoaded || isLoading) {
     return (
       <div className="size-10 rounded-full bg-gray-200 animate-pulse shrink-0" />
     );
@@ -80,6 +81,12 @@ const UserAuthButton = () => {
             className="w-full"
           >
             Create a Cookbook <BookIcon className="ml-auto text-primary-200" />
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/${currentUser?.username}/billing`} className="w-full">
+            Billing & Plan{" "}
+            <CreditCardIcon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => signOut({ redirectUrl: "/" })}>
