@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import StarRatings from "@/components/star-ratings";
 import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
 import {
   useIsSavedRecipe,
   useToggleSaveRecipe,
@@ -31,7 +30,6 @@ interface RecipeCardProps {
 
 const RecipeCard = ({ recipe, categoryContext, href }: RecipeCardProps) => {
   const router = useRouter();
-  const { userId } = useAuth();
   const { data: saveData } = useIsSavedRecipe(recipe.id);
   const isSaved = saveData?.isSaved ?? false;
 
@@ -56,9 +54,7 @@ const RecipeCard = ({ recipe, categoryContext, href }: RecipeCardProps) => {
 
   const handleGoToAuthor = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const path =
-      userId === recipe.userId ? `/${username}/profile` : `/${username}`;
-    router.push(path);
+    router.push(`/users/${username}`);
   };
 
   return (

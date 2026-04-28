@@ -118,6 +118,13 @@ export const useDeleteCookbook = () => {
 };
 
 
+export const useGetPublicCookbooksByUsername = (username: string, page = 1, pageSize = 12) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.cookbooks.getManyPublicByUsername.queryOptions({ username, page, pageSize }),
+  );
+};
+
 export const useCreateCheckoutSession = () => {
   const trpc = useTRPC();
   return useMutation(trpc.cookbooks.createCheckoutSession.mutationOptions());

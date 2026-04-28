@@ -142,6 +142,13 @@ export const useGetSavedBlogs = (pageSize = 12, page = 1) => {
   );
 };
 
+export const useGetPublicBlogsByUsername = (username: string, page = 1, pageSize = 12) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.blogs.getManyPublicByUsername.queryOptions({ username, page, pageSize }),
+  );
+};
+
 export const useDeleteBlog = () => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();

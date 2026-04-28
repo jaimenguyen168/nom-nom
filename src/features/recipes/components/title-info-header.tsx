@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import StarRatings from "@/components/star-ratings";
-import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import AppTitle from "@/components/app-title";
@@ -40,7 +39,6 @@ interface BlogProps extends BaseProps {
 type TitleInfoHeaderProps = RecipeProps | BlogProps;
 
 const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
-  const { user } = useUser();
   const router = useRouter();
 
   const recipeId = props.type === "recipe" ? props.recipeId : "";
@@ -81,11 +79,7 @@ const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
   const ratingCount = stats?.totalReviews ?? 0;
 
   const handleGoToAuthor = () => {
-    const targetUrl =
-      user?.id === props.authorId
-        ? `/${props.authorName}/profile`
-        : `/${props.authorName}`;
-    router.push(targetUrl);
+    router.push(`/users/${props.authorName}`);
   };
 
   return (

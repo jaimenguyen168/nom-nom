@@ -178,7 +178,7 @@ export const recipesRouter = createTRPCRouter({
           isPublic: recipes.isPublic,
           rating: avg(recipeReviews.rating).as("rating"),
           calories:
-            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
               "calories",
             ),
         })
@@ -563,7 +563,7 @@ export const recipesRouter = createTRPCRouter({
           isPublic: recipes.isPublic,
           rating: avg(recipeReviews.rating).as("rating"),
           calories:
-            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
               "calories",
             ),
         })
@@ -748,7 +748,7 @@ export const recipesRouter = createTRPCRouter({
           profileImageUrl: users.profileImageUrl,
           rating: avg(recipeReviews.rating).as("rating"),
           calories:
-            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
               "calories",
             ),
         })
@@ -802,7 +802,7 @@ export const recipesRouter = createTRPCRouter({
           profileImageUrl: users.profileImageUrl,
           rating: avg(recipeReviews.rating).as("rating"),
           calories:
-            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
               "calories",
             ),
         })
@@ -890,6 +890,71 @@ export const recipesRouter = createTRPCRouter({
       await nomnomDb.delete(recipes).where(eq(recipes.id, input.recipeId));
 
       return { success: true };
+    }),
+
+  getManyPublicByUsername: publicProcedure
+    .input(
+      z.object({
+        username: z.string(),
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { username, page, pageSize } = input;
+
+      const user = await nomnomDb
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, username))
+        .then((rows) => rows[0]);
+
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      const data = await nomnomDb
+        .select({
+          id: recipes.id,
+          title: recipes.title,
+          slug: recipes.slug,
+          imageUrl: recipes.imageUrl,
+          userId: recipes.userId,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          createdAt: recipes.createdAt,
+          isPublic: recipes.isPublic,
+          rating: avg(recipeReviews.rating).as("rating"),
+          calories:
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+              "calories",
+            ),
+        })
+        .from(recipes)
+        .leftJoin(users, eq(recipes.userId, users.id))
+        .leftJoin(recipeReviews, eq(recipeReviews.recipeId, recipes.id))
+        .leftJoin(recipeNutrition, eq(recipeNutrition.recipeId, recipes.id))
+        .where(and(eq(recipes.userId, user.id), eq(recipes.isPublic, true)))
+        .groupBy(recipes.id, users.username, users.profileImageUrl)
+        .orderBy(desc(recipes.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(recipes)
+        .where(and(eq(recipes.userId, user.id), eq(recipes.isPublic, true)));
+
+      return {
+        items: data.map((r) => ({
+          ...r,
+          rating: r.rating ? parseFloat(r.rating) : 0,
+          calories: r.calories ?? 0,
+        })),
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
     }),
 
   /**
