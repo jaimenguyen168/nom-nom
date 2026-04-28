@@ -644,6 +644,74 @@ export const cookbooksRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  getManyPublicByUsername: publicProcedure
+    .input(
+      z.object({
+        username: z.string(),
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { username, page, pageSize } = input;
+
+      const user = await nomnomDb
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, username))
+        .then((rows) => rows[0]);
+
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      const data = await nomnomDb
+        .select({
+          id: cookbooks.id,
+          title: cookbooks.title,
+          slug: cookbooks.slug,
+          description: cookbooks.description,
+          coverImageUrl: cookbooks.coverImageUrl,
+          cuisine: cookbooks.cuisine,
+          difficulty: cookbooks.difficulty,
+          isFree: cookbooks.isFree,
+          price: cookbooks.price,
+          currency: cookbooks.currency,
+          status: cookbooks.status,
+          createdAt: cookbooks.createdAt,
+          authorId: cookbooks.authorId,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          totalRecipes: count(cookbookRecipes.id).as("totalRecipes"),
+          avgRating: avg(cookbookReviews.rating).as("avgRating"),
+          totalReviews: count(cookbookReviews.id).as("totalReviews"),
+        })
+        .from(cookbooks)
+        .leftJoin(users, eq(cookbooks.authorId, users.id))
+        .leftJoin(cookbookRecipes, eq(cookbookRecipes.cookbookId, cookbooks.id))
+        .leftJoin(cookbookReviews, eq(cookbookReviews.cookbookId, cookbooks.id))
+        .where(and(eq(cookbooks.authorId, user.id), eq(cookbooks.status, "published")))
+        .groupBy(cookbooks.id, users.username, users.profileImageUrl)
+        .orderBy(desc(cookbooks.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(cookbooks)
+        .where(and(eq(cookbooks.authorId, user.id), eq(cookbooks.status, "published")));
+
+      return {
+        items: data.map((c) => ({
+          ...c,
+          avgRating: c.avgRating ? parseFloat(c.avgRating) : 0,
+        })),
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
+    }),
+
   createCheckoutSession: authProcedure
     .input(z.object({ cookbookSlug: z.string() }))
     .mutation(async ({ ctx, input }) => {

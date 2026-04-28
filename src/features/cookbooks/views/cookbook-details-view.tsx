@@ -109,7 +109,7 @@ export default function CookbookDetailsView({ slug }: Props) {
 
           <div
             className="flex items-center gap-2 mb-4 cursor-pointer w-fit"
-            onClick={() => router.push(`/${cookbook.username}`)}
+            onClick={() => router.push(`/users/${cookbook.username}`)}
           >
             <Avatar className="size-6 border border-white/30">
               <AvatarImage

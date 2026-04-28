@@ -56,12 +56,12 @@ const UserAuthButton = () => {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild className="hover:bg-primary-200/30 focus:bg-primary-200/30 cursor-pointer">
           <Link href={`/${currentUser?.username}/profile`} className="w-full">
             Go to Profile <User2Icon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild className="hover:bg-primary-200/30 focus:bg-primary-200/30 cursor-pointer">
           <Link
             href={`/${currentUser?.username}/recipes/new`}
             className="w-full"
@@ -70,12 +70,12 @@ const UserAuthButton = () => {
             <ClipboardPenLineIcon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild className="hover:bg-primary-200/30 focus:bg-primary-200/30 cursor-pointer">
           <Link href={`/${currentUser?.username}/blogs/new`} className="w-full">
             Create a Blog <MonitorUpIcon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild className="hover:bg-primary-200/30 focus:bg-primary-200/30 cursor-pointer">
           <Link
             href={`/${currentUser?.username}/cookbooks/new`}
             className="w-full"
@@ -83,13 +83,13 @@ const UserAuthButton = () => {
             Create a Cookbook <BookIcon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild className="hover:bg-primary-200/30 focus:bg-primary-200/30 cursor-pointer">
           <Link href={`/${currentUser?.username}/billing`} className="w-full">
             Billing & Plan{" "}
             <CreditCardIcon className="ml-auto text-primary-200" />
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => signOut({ redirectUrl: "/" })}>
+        <DropdownMenuItem className="hover:bg-primary-200/30 focus:bg-primary-200/30 cursor-pointer" onClick={() => signOut({ redirectUrl: "/" })}>
           Log out <LogOutIcon className="ml-auto text-primary-200" />
         </DropdownMenuItem>
       </DropdownMenuContent>

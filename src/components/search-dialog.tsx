@@ -155,7 +155,7 @@ const SearchDialog = ({ isOpen, onOpenChange }: SearchDialogProps) => {
                       image={u.profileImageUrl}
                       title={u.username ?? ""}
                       subtitle={`${u.firstName ?? ""} ${u.lastName ?? ""}`.trim()}
-                      onClick={() => handleNavigate(`/${u.username}`)}
+                      onClick={() => handleNavigate(`/users/${u.username}`)}
                     />
                   ))}
                 </SearchSection>

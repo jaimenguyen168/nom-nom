@@ -34,11 +34,7 @@ export default function BlogDetailsView({ blogSlug }: Props) {
   const tags = data.tags;
 
   const handleGoToAuthor = () => {
-    const path =
-      userId === blog.authorId
-        ? `/${user.username}/profile`
-        : `/${user.username}`;
-    router.push(path);
+    router.push(`/users/${user.username}`);
   };
 
   return (
