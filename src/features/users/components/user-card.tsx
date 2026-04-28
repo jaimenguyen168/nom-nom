@@ -3,7 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Grid3X3, NotebookPen } from "lucide-react";
+import { BookOpen, Grid3X3, NotebookPen, UserCheck, UserPlus } from "lucide-react";
+import { useGetCurrentUser, useIsFollowing, useToggleFollow } from "@/hooks/trpcHooks/use-users";
+import { Button } from "@/components/ui/button";
 
 export type UserCardItem = {
   id: string;
@@ -20,6 +22,13 @@ export type UserCardItem = {
 
 export function UserCard({ user }: { user: UserCardItem }) {
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ");
+  const { data: currentUser } = useGetCurrentUser();
+  const isOwner = currentUser?.id === user.id;
+
+  const { data: followData } = useIsFollowing(isOwner ? undefined : user.id);
+  const { handleToggle, isPending } = useToggleFollow(user.id, user.username ?? "");
+
+  const isFollowing = followData?.isFollowing ?? false;
 
   return (
     <Link href={`/users/${user.username}`}>
@@ -49,6 +58,37 @@ export function UserCard({ user }: { user: UserCardItem }) {
           <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
             {user.bio}
           </p>
+        )}
+
+        {/* Follow button */}
+        {!isOwner && currentUser && (
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleToggle();
+            }}
+            disabled={isPending}
+            variant={isFollowing ? "outline" : "default"}
+            size="sm"
+            className={
+              isFollowing
+                ? "w-full text-xs gap-1.5"
+                : "w-full text-xs gap-1.5 bg-primary-200 hover:bg-primary-300 text-white"
+            }
+          >
+            {isFollowing ? (
+              <>
+                <UserCheck className="size-3" />
+                Following
+              </>
+            ) : (
+              <>
+                <UserPlus className="size-3" />
+                Follow
+              </>
+            )}
+          </Button>
         )}
 
         {/* Content type icons */}

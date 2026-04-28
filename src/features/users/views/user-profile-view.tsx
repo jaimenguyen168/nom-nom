@@ -33,25 +33,25 @@ export default function UserProfileView({ username }: Props) {
     <div className="space-y-10">
       {/* Header */}
       <UserProfileHeader
+        userId={user.id}
         username={user.username}
         firstName={user.firstName}
         lastName={user.lastName}
         bio={user.bio}
         profileImageUrl={user.profileImageUrl}
-        recipeCount={user.recipeCount}
-        blogCount={user.blogCount}
-        cookbookCount={user.cookbookCount}
+        followerCount={user.followerCount}
+        followingCount={user.followingCount}
       />
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <div className="flex gap-0">
+        <div className="flex">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-5 py-3 text-xs font-medium tracking-widest uppercase border-b-2 -mb-px transition-colors",
+                "flex-1 flex items-center justify-center gap-2 py-3 text-xs font-medium tracking-widest uppercase border-b-2 -mb-px transition-colors",
                 activeTab === tab.id
                   ? "border-gray-900 text-gray-900"
                   : "border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300",

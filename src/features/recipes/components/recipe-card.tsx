@@ -87,6 +87,10 @@ const RecipeCard = ({ recipe, categoryContext, href }: RecipeCardProps) => {
             )}
           />
         </button>
+        <div className="absolute top-2 left-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-2 rounded-lg shadow text-xs font-medium text-gray-700 z-10">
+          <Flame size={12} className="text-primary-200" />
+          {recipe.calories} cals
+        </div>
       </div>
 
       <div className="px-4 pb-4 space-y-2">
@@ -94,28 +98,22 @@ const RecipeCard = ({ recipe, categoryContext, href }: RecipeCardProps) => {
         <h3 className="font-semibold text-sm md:text-base capitalize overflow-hidden line-clamp-2 leading-snug min-h-13">
           {recipe.title}
         </h3>
-        <div className="flex justify-between text-sm font-medium text-gray-600 items-center">
-          <div
-            onClick={handleGoToAuthor}
-            className="flex items-center gap-2 cursor-pointer hover:scale-105"
-          >
-            {userProfileImageUrl ? (
-              <Image
-                src={userProfileImageUrl}
-                alt={username}
-                width={100}
-                height={100}
-                className="w-6 h-6 rounded-full object-cover"
-              />
-            ) : (
-              <UserCircleIcon className="size-4 text-primary-200" />
-            )}
-            <span>{username}</span>
-          </div>
-          <div className="flex items-center gap-1 p-2 rounded-lg border">
-            <Flame size={14} className="text-primary-200" />
-            {recipe.calories} cals
-          </div>
+        <div
+          onClick={handleGoToAuthor}
+          className="flex items-center gap-2 cursor-pointer hover:scale-105 min-w-0 text-sm font-medium text-gray-600"
+        >
+          {userProfileImageUrl ? (
+            <Image
+              src={userProfileImageUrl}
+              alt={username}
+              width={100}
+              height={100}
+              className="w-6 h-6 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <UserCircleIcon className="size-4 text-primary-200 shrink-0" />
+          )}
+          <span className="truncate">{username}</span>
         </div>
       </div>
     </Card>

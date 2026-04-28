@@ -2,7 +2,7 @@ import { authProcedure, createTRPCRouter, publicProcedure } from "@/trpc/init";
 import { z } from "zod";
 import { nomnomDb } from "@/db";
 import { and, count, desc, eq, sql } from "drizzle-orm";
-import { users } from "@/db/schemas/users";
+import { users, userFollows } from "@/db/schemas/users";
 import { recipes } from "@/db/schemas/recipes";
 import { blogs } from "@/db/schemas/blogs";
 import { cookbooks, cookbookPurchases } from "@/db/schemas/cookbooks";
@@ -62,7 +62,7 @@ export const usersRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
       }
 
-      const [recipeCount, blogCount, cookbookCount] = await Promise.all([
+      const [recipeCount, blogCount, cookbookCount, followerCount, followingCount] = await Promise.all([
         nomnomDb
           .select({ count: count() })
           .from(recipes)
@@ -78,9 +78,19 @@ export const usersRouter = createTRPCRouter({
           .from(cookbooks)
           .where(and(eq(cookbooks.authorId, user.id), eq(cookbooks.status, "published")))
           .then((r) => r[0].count),
+        nomnomDb
+          .select({ count: count() })
+          .from(userFollows)
+          .where(eq(userFollows.followingId, user.id))
+          .then((r) => r[0].count),
+        nomnomDb
+          .select({ count: count() })
+          .from(userFollows)
+          .where(eq(userFollows.followerId, user.id))
+          .then((r) => r[0].count),
       ]);
 
-      return { ...user, recipeCount, blogCount, cookbookCount };
+      return { ...user, recipeCount, blogCount, cookbookCount, followerCount, followingCount };
     }),
 
   getMany: publicProcedure
@@ -93,7 +103,7 @@ export const usersRouter = createTRPCRouter({
           .default("newest"),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const { page, pageSize, sortBy } = input;
 
       // Correlated subquery expressions for counts — avoids cartesian products from multi-joins
@@ -110,6 +120,11 @@ export const usersRouter = createTRPCRouter({
         top_selling:     desc(saleCountExpr),
       }[sortBy];
 
+      const currentUserId = ctx.userId;
+      const baseWhere = currentUserId
+        ? and(sql`${users.username} IS NOT NULL`, sql`${users.id} != ${currentUserId}`)
+        : sql`${users.username} IS NOT NULL`;
+
       const data = await nomnomDb
         .select({
           id:              users.id,
@@ -125,7 +140,7 @@ export const usersRouter = createTRPCRouter({
           saleCount:     saleCountExpr,
         })
         .from(users)
-        .where(sql`${users.username} IS NOT NULL`)
+        .where(baseWhere)
         .orderBy(orderBy)
         .limit(pageSize)
         .offset((page - 1) * pageSize);
@@ -133,7 +148,7 @@ export const usersRouter = createTRPCRouter({
       const [totalResult] = await nomnomDb
         .select({ count: count() })
         .from(users)
-        .where(sql`${users.username} IS NOT NULL`);
+        .where(baseWhere);
 
       return {
         items: data,
@@ -159,5 +174,49 @@ export const usersRouter = createTRPCRouter({
           sql`LOWER(${users.username}) LIKE LOWER(${"%" + input.query + "%"})`,
         )
         .limit(5);
+    }),
+
+  isFollowing: authProcedure
+    .input(z.object({ targetUserId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const row = await nomnomDb
+        .select({ followerId: userFollows.followerId })
+        .from(userFollows)
+        .where(
+          and(
+            eq(userFollows.followerId, ctx.userId),
+            eq(userFollows.followingId, input.targetUserId),
+          ),
+        )
+        .then((rows) => rows[0]);
+
+      return { isFollowing: !!row };
+    }),
+
+  follow: authProcedure
+    .input(z.object({ targetUserId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.userId === input.targetUserId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot follow yourself" });
+      }
+      await nomnomDb
+        .insert(userFollows)
+        .values({ followerId: ctx.userId, followingId: input.targetUserId })
+        .onConflictDoNothing();
+      return { success: true };
+    }),
+
+  unfollow: authProcedure
+    .input(z.object({ targetUserId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await nomnomDb
+        .delete(userFollows)
+        .where(
+          and(
+            eq(userFollows.followerId, ctx.userId),
+            eq(userFollows.followingId, input.targetUserId),
+          ),
+        );
+      return { success: true };
     }),
 });
