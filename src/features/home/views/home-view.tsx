@@ -14,7 +14,7 @@ export default function HomeView() {
     <div className="flex-col flex justify-center items-center overflow-y-auto overflow-x-hidden">
       <PinkGradientShape />
 
-      <div className="max-w-7xl mx-auto px-8 md:px-12 pb-16 flex flex-col gap-16">
+      <div className="max-w-7xl mx-auto px-4 md:px-12 pb-16 flex flex-col gap-16">
         <HomeHero />
         <ShareYourRecipe />
         <RecipeGridSection feedType="trending" />

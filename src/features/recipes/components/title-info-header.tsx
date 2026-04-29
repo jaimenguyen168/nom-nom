@@ -21,6 +21,7 @@ interface BaseProps {
   title: string;
   authorId: string;
   authorName: string;
+  authorUsername: string;
   authorProfileImageUrl?: string;
   date: string;
   className?: string;
@@ -79,7 +80,7 @@ const TitleInfoHeader = (props: TitleInfoHeaderProps) => {
   const ratingCount = stats?.totalReviews ?? 0;
 
   const handleGoToAuthor = () => {
-    router.push(`/users/${props.authorName}`);
+    router.push(`/users/${props.authorUsername}`);
   };
 
   return (

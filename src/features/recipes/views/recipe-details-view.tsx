@@ -39,7 +39,8 @@ export default function RecipeDetailsView({ recipeSlug }: Props) {
           recipeId={recipe.id}
           title={recipe.title}
           authorId={user.id}
-          authorName={`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()}
+          authorName={`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || (user.username ?? "")}
+          authorUsername={user.username ?? ""}
           authorProfileImageUrl={user.profileImageUrl ?? undefined}
           date={recipe.createdAt?.toISOString() ?? ""}
         />

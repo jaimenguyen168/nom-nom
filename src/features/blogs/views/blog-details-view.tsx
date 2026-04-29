@@ -46,6 +46,7 @@ export default function BlogDetailsView({ blogSlug }: Props) {
           title={blog.title}
           authorId={blog.authorId as string}
           authorName={user.username as string}
+          authorUsername={user.username as string}
           authorProfileImageUrl={user.profileImageUrl as string}
           date={blog.createdAt?.toISOString() ?? ""}
         />
