@@ -1,8 +1,8 @@
 # nom-nom
 
-> Here is a one-sentence description based on the source code:
+<img width="1200" height="600" alt="nomnom" src="https://github.com/user-attachments/assets/7255eda2-d644-4d1b-848b-92dcb8057858" />
 
-This project uses Next.js, TypeScript, and tRPC to build a web application, likely a food-related platform given the "nom-nom" name.
+<br />
 
 <div align="center">
   <img src="https://img.shields.io/badge/-Next.js-black?style=for-the-badge&logoColor=white&logo=nextdotjs&color=000000" alt="Next.js" />
@@ -19,27 +19,31 @@ This project uses Next.js, TypeScript, and tRPC to build a web application, like
 ## 📋 <a name="table-of-contents">Table of Contents</a>
 
 1. 📋 [Project Overview](#project-overview)
-2. 📌 [Getting Started](#getting-started)
+2. 🔋 [Key Features](#key-features)
+3. 📌 [Getting Started](#getting-started)
 
 ---
 
 ## <a name="project-overview">📋 Project Overview</a>
 
-Nom-nom is a full-stack web application designed to streamline recipe and meal planning. The platform allows users to discover, create, and share recipes, as well as save and organize their favorite cookbooks. With a focus on user engagement and community building, Nom-nom aims to become the go-to destination for home cooks and food enthusiasts.
+Nom-nom is a full-stack web application designed to streamline recipe and meal planning for home cooks and food enthusiasts. Users can discover, create, edit, and share recipes and blogs, as well as organize their favorites into cookbooks. The platform leverages AI-powered agents to assist with content generation, making it easy to produce high-quality recipes and blogs. With built-in community features such as commenting, liking, and rating, alongside secure authentication and subscription-based billing, Nom-nom provides a comprehensive and engaging experience for anyone passionate about cooking and food.
 
-The application offers a range of features, including user authentication, recipe creation and editing, cookbook management, and social sharing. By providing a seamless and intuitive user experience, Nom-nom seeks to make cooking and meal planning easier, more enjoyable, and more accessible to everyone.
+## <a name="key-features">🔋 Key Features</a>
 
-Nom-nom differentiates itself from existing solutions through its emphasis on community features, such as user-generated recipes, reviews, and ratings. The platform also leverages AI-powered agents to assist users with recipe creation and meal planning, making it a unique and innovative solution in the market.
+- 👉 **User Authentication**: secure login and registration using Clerk <br />
+- 👉 **Recipe & Blog Management**: create, edit, and manage your own recipes and blogs <br />
+- 👉 **AI-Powered Content Generation**: generate high-quality recipes and blogs using AI agents <br />
+- 👉 **Digital Cookbook Marketplace**: sell and purchase digital cookbooks from other creators <br />
+- 👉 **Discovery & Saving**: discover and save recipes and blogs from other users <br />
+- 👉 **Follow Your Favorite Chefs**: stay updated with content from chefs you follow <br />
+- 👉 **Billing & Subscription**: premium features and subscription-based billing <br />
 
-In addition to recipes, Nom-nom allows users to create and share blogs, providing a comprehensive platform for food enthusiasts to share their passion for cooking and food.
+## 🚀 Upcoming Features
 
-## Key Features
-
-👉 **User Authentication**: secure login and registration functionality using Clerk
-👉 **Recipe and Blog Management**: users can create, edit, and manage their own recipes and blogs
-👉 **Content Generation**: agent-based tools for generating high-quality recipes and blogs
-👉 **Discovery and Saving**: users can discover and save recipes and blogs from other users
-👉 **Billing and Subscription**: premium features and subscription-based billing
+- 👉 **Tutorial Videos**: step-by-step cooking videos alongside recipes <br />
+- 👉 **Meal Planning**: plan your meals for the week with ease <br />
+- 👉 **Meal Tracking History**: keep track of what you've cooked over time <br />
+- 👉 **Personalized Recommendations**: recipe and blog suggestions tailored to your preferences and needs <br />
 
 ---
 
