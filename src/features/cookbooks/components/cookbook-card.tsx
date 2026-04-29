@@ -6,6 +6,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BookOpen, ChefHat, Lock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -41,6 +42,7 @@ export const CookbookCard = ({
   index: number;
   href: string;
 }) => {
+  const router = useRouter();
   const spineColor = SPINE_COLORS[index % SPINE_COLORS.length];
   const isPaid = !cookbook.isFree;
 
@@ -95,7 +97,14 @@ export const CookbookCard = ({
             {/* Top row — author avatar + price badge */}
             <div className="absolute top-0 inset-x-0 p-3 flex items-start justify-between">
               {/* Author avatar */}
-              <Avatar className="size-7 border border-white/30 shadow">
+              <Avatar
+                className="size-7 border border-white/30 shadow cursor-pointer hover:ring-2 hover:ring-white/60 transition-all"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (cookbook.username) router.push(`/users/${cookbook.username}`);
+                }}
+              >
                 <AvatarImage
                   src={cookbook.profileImageUrl ?? ""}
                   className="object-cover"

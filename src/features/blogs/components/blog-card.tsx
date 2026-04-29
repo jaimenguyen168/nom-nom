@@ -33,7 +33,7 @@ const BlogCard = ({ blog, size = "medium", href }: BlogCardProps) => {
 
   const handleGoToAuthor = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/${blog.username}`);
+    router.push(`/users/${blog.username}`);
   };
 
   const formattedDate = blog.createdAt

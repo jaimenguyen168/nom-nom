@@ -13,7 +13,6 @@ import { useGetCurrentUser } from "@/hooks/trpcHooks/use-users";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import UserRecipeCard from "@/features/recipes/components/user-recipe-card";
-
 const statusFilters: { label: string; value: RecipeStatusFilter }[] = [
   { label: "All", value: "all" },
   { label: "Public", value: "public" },

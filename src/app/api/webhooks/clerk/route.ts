@@ -4,6 +4,7 @@ import { WebhookEvent } from "@clerk/nextjs/server";
 import { nomnomDb } from "@/db";
 import { users } from "@/db/schemas/users";
 import { eq } from "drizzle-orm";
+import { resetUsage, getOrCreateUsage } from "@/features/billing/lib/usage";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -38,7 +39,12 @@ export async function POST(req: Request) {
     return new Response("Invalid webhook signature", { status: 400 });
   }
 
-  const { type: eventType, data } = evt;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { type: eventType, data } = evt as any;
+
+  // -------------------------------------------------------------------------
+  // User lifecycle
+  // -------------------------------------------------------------------------
 
   if (eventType === "user.created") {
     await nomnomDb.insert(users).values({
@@ -52,11 +58,35 @@ export async function POST(req: Request) {
       firstName: data.first_name,
       lastName: data.last_name,
     });
+    // Anchor the billing cycle to sign-up time so resets happen on the
+    // same day each month (e.g. signed up Apr 10 → resets May 10, Jun 10…)
+    await getOrCreateUsage(data.id);
   }
 
   if (eventType === "user.deleted") {
     if (data.id) {
       await nomnomDb.delete(users).where(eq(users.id, data.id));
+      // user_usage rows cascade-delete via FK
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Billing — reset usage at the start of every new billing period.
+  //
+  // Clerk fires these events when a subscription is created or renewed.
+  // Enable them in your Clerk Dashboard → Webhooks → Billing section.
+  // -------------------------------------------------------------------------
+
+  if (
+    eventType === "subscription.created" ||
+    eventType === "subscription.updated"
+  ) {
+    // data.user_id is the Clerk user ID on B2C billing events
+    const userId: string | undefined = data.user_id ?? data.userId;
+
+    if (userId) {
+      await resetUsage(userId);
+      console.log(`[billing] Reset usage for user ${userId} (${eventType})`);
     }
   }
 

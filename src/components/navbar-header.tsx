@@ -19,8 +19,8 @@ import SearchDialog from "@/components/search-dialog";
 const navBarLinks = [
   { title: "Home", href: "/" },
   { title: "Recipes", href: "/recipes" },
-  { title: "Categories", href: "/categories" },
   { title: "Blogs", href: "/blogs" },
+  { title: "Pricing", href: "/pricing" },
   { title: "About", href: "/about" },
 ];
 

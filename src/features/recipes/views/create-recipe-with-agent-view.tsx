@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import AppTitle from "@/components/app-title";
 import { EXAMPLE_PROMPTS } from "@/features/recipes/constants";
 import { useCreateRecipeWithAgent } from "@/hooks/trpcHooks/use-recipes-agent";
+import { handleAgentError } from "../../billing/components/handle-creating-toast";
+import { useAgentJobs } from "@/features/billing/contexts/agent-jobs-context";
 
 export default function CreateRecipeWithAgentView({
   username,
@@ -18,25 +20,33 @@ export default function CreateRecipeWithAgentView({
   const [prompt, setPrompt] = useState("");
   const router = useRouter();
   const createRecipe = useCreateRecipeWithAgent();
+  const { addJob } = useAgentJobs();
+  const submittingRef = useRef(false);
 
   const handleSubmit = () => {
-    if (!prompt.trim()) {
-      toast.error("Please enter a recipe prompt");
+    if (submittingRef.current || !prompt.trim()) {
+      if (!prompt.trim()) toast.error("Please enter a recipe prompt");
       return;
     }
+
+    submittingRef.current = true;
+    const after = new Date().toISOString();
 
     createRecipe.mutate(
       { prompt },
       {
         onSuccess: () => {
-          toast.success(
-            "Your recipe is being generated! Check back in a moment.",
-          );
+          submittingRef.current = false;
           setPrompt("");
+          addJob({ type: "recipe", after, username });
           router.push(`/${username}/recipes`);
         },
-        onError: () => {
-          toast.error("Failed to start recipe generation");
+        onError: (error) => {
+          submittingRef.current = false;
+          handleAgentError(error, {
+            fallbackMessage: "Failed to start recipe generation",
+            onUpgrade: () => router.push("/pricing"),
+          });
         },
       },
     );
@@ -92,7 +102,7 @@ export default function CreateRecipeWithAgentView({
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Start generating...
+                  Starting...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">

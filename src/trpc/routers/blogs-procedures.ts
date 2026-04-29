@@ -8,7 +8,7 @@ import {
 } from "@/db/schemas/blogs";
 import { users } from "@/db/schemas/users";
 import { nomnomDb } from "@/db";
-import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import { slugify } from "@/lib/utils";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -554,5 +554,80 @@ export const blogsRouter = createTRPCRouter({
       await nomnomDb.delete(blogs).where(eq(blogs.id, input.blogId));
 
       return { success: true };
+    }),
+
+  getManyPublicByUsername: publicProcedure
+    .input(
+      z.object({
+        username: z.string(),
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { username, page, pageSize } = input;
+
+      const user = await nomnomDb
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, username))
+        .then((rows) => rows[0]);
+
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      const data = await nomnomDb
+        .select({
+          id: blogs.id,
+          title: blogs.title,
+          slug: blogs.slug,
+          excerpt: blogs.excerpt,
+          featuredImage: blogs.featuredImage,
+          topic: blogs.topic,
+          createdAt: blogs.createdAt,
+          authorId: blogs.authorId,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+        })
+        .from(blogs)
+        .leftJoin(users, eq(blogs.authorId, users.id))
+        .where(and(eq(blogs.authorId, user.id), eq(blogs.status, "published")))
+        .orderBy(desc(blogs.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(blogs)
+        .where(and(eq(blogs.authorId, user.id), eq(blogs.status, "published")));
+
+      return {
+        items: data,
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
+    }),
+
+  /**
+   * Polls for the first blog created after a given timestamp.
+   * Used by the AI generation view to detect when Inngest has finished.
+   */
+  getLatestCreatedAfter: authProcedure
+    .input(z.object({ after: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const rows = await nomnomDb
+        .select({ slug: blogs.slug, title: blogs.title })
+        .from(blogs)
+        .where(
+          and(
+            eq(blogs.authorId, ctx.userId),
+            gt(blogs.createdAt, new Date(input.after)),
+          ),
+        )
+        .orderBy(desc(blogs.createdAt))
+        .limit(1);
+      return rows[0] ?? null;
     }),
 });

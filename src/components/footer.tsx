@@ -48,6 +48,16 @@ const Footer = () => {
                   Categories
                 </Link>
               </li>
+              <li>
+                <Link href="/users" className="hover:text-primary-200">
+                  Creators
+                </Link>
+              </li>
+              <li>
+                <Link href="/pricing" className="hover:text-primary-200">
+                  Pricing
+                </Link>
+              </li>
             </ul>
           </div>
 

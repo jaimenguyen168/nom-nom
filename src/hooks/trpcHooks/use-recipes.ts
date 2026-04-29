@@ -165,6 +165,13 @@ export const useGetSavedRecipes = (pageSize = 12, page = 1) => {
   );
 };
 
+export const useGetPublicRecipesByUsername = (username: string, page = 1, pageSize = 12) => {
+  const trpc = useTRPC();
+  return useSuspenseQuery(
+    trpc.recipes.getManyPublicByUsername.queryOptions({ username, page, pageSize }),
+  );
+};
+
 export const useDeleteRecipe = () => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();

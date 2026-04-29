@@ -34,11 +34,7 @@ export default function BlogDetailsView({ blogSlug }: Props) {
   const tags = data.tags;
 
   const handleGoToAuthor = () => {
-    const path =
-      userId === blog.authorId
-        ? `/${user.username}/profile`
-        : `/${user.username}`;
-    router.push(path);
+    router.push(`/users/${user.username}`);
   };
 
   return (
@@ -50,6 +46,7 @@ export default function BlogDetailsView({ blogSlug }: Props) {
           title={blog.title}
           authorId={blog.authorId as string}
           authorName={user.username as string}
+          authorUsername={user.username as string}
           authorProfileImageUrl={user.profileImageUrl as string}
           date={blog.createdAt?.toISOString() ?? ""}
         />

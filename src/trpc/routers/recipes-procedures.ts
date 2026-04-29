@@ -13,10 +13,16 @@ import {
   recipeTags,
   userSavedRecipes,
 } from "@/db/schemas/recipes";
+import {
+  cookbooks,
+  cookbookRecipes,
+  cookbookPurchases,
+  userSavedCookbooks,
+} from "@/db/schemas/cookbooks";
 import { nomnomDb } from "@/db";
 import { slugify } from "@/lib/utils";
 import { users } from "@/db/schemas/users";
-import { and, asc, avg, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { categories } from "@/db/schemas/categories";
@@ -172,7 +178,7 @@ export const recipesRouter = createTRPCRouter({
           isPublic: recipes.isPublic,
           rating: avg(recipeReviews.rating).as("rating"),
           calories:
-            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
               "calories",
             ),
         })
@@ -231,7 +237,56 @@ export const recipesRouter = createTRPCRouter({
       const isOwner = ctx.userId === result.recipes.userId;
 
       if (!result.recipes.isPublic && !isOwner) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+        // Allow access if the recipe is inside a cookbook the user has purchased
+        // or a free cookbook the user has saved
+        let hasCookbookAccess = false;
+
+        if (ctx.userId) {
+          const [purchasedRow, savedFreeRow] = await Promise.all([
+            // Purchased paid cookbook containing this recipe
+            nomnomDb
+              .select({ id: cookbookPurchases.id })
+              .from(cookbookPurchases)
+              .innerJoin(
+                cookbookRecipes,
+                eq(cookbookRecipes.cookbookId, cookbookPurchases.cookbookId),
+              )
+              .where(
+                and(
+                  eq(cookbookPurchases.userId, ctx.userId),
+                  eq(cookbookRecipes.recipeId, result.recipes.id),
+                ),
+              )
+              .then((rows) => rows[0]),
+
+            // Saved free cookbook containing this recipe
+            nomnomDb
+              .select({ id: userSavedCookbooks.id })
+              .from(userSavedCookbooks)
+              .innerJoin(
+                cookbooks,
+                eq(cookbooks.id, userSavedCookbooks.cookbookId),
+              )
+              .innerJoin(
+                cookbookRecipes,
+                eq(cookbookRecipes.cookbookId, cookbooks.id),
+              )
+              .where(
+                and(
+                  eq(userSavedCookbooks.userId, ctx.userId),
+                  eq(cookbookRecipes.recipeId, result.recipes.id),
+                  eq(cookbooks.isFree, true),
+                ),
+              )
+              .then((rows) => rows[0]),
+          ]);
+
+          hasCookbookAccess = !!(purchasedRow || savedFreeRow);
+        }
+
+        if (!hasCookbookAccess) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+        }
       }
 
       const recipeId = result.recipes.id;
@@ -508,7 +563,7 @@ export const recipesRouter = createTRPCRouter({
           isPublic: recipes.isPublic,
           rating: avg(recipeReviews.rating).as("rating"),
           calories:
-            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
               "calories",
             ),
         })
@@ -693,7 +748,7 @@ export const recipesRouter = createTRPCRouter({
           profileImageUrl: users.profileImageUrl,
           rating: avg(recipeReviews.rating).as("rating"),
           calories:
-            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
               "calories",
             ),
         })
@@ -747,7 +802,7 @@ export const recipesRouter = createTRPCRouter({
           profileImageUrl: users.profileImageUrl,
           rating: avg(recipeReviews.rating).as("rating"),
           calories:
-            sql<number>`MAX(CASE WHEN ${recipeNutrition.nutrientName} = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
               "calories",
             ),
         })
@@ -835,5 +890,91 @@ export const recipesRouter = createTRPCRouter({
       await nomnomDb.delete(recipes).where(eq(recipes.id, input.recipeId));
 
       return { success: true };
+    }),
+
+  getManyPublicByUsername: publicProcedure
+    .input(
+      z.object({
+        username: z.string(),
+        page: z.number().default(1),
+        pageSize: z.number().min(1).max(50).default(12),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { username, page, pageSize } = input;
+
+      const user = await nomnomDb
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, username))
+        .then((rows) => rows[0]);
+
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      const data = await nomnomDb
+        .select({
+          id: recipes.id,
+          title: recipes.title,
+          slug: recipes.slug,
+          imageUrl: recipes.imageUrl,
+          userId: recipes.userId,
+          username: users.username,
+          profileImageUrl: users.profileImageUrl,
+          createdAt: recipes.createdAt,
+          isPublic: recipes.isPublic,
+          rating: avg(recipeReviews.rating).as("rating"),
+          calories:
+            sql<number>`MAX(CASE WHEN LOWER(${recipeNutrition.nutrientName}) = 'calories' THEN ${recipeNutrition.amount} END)`.as(
+              "calories",
+            ),
+        })
+        .from(recipes)
+        .leftJoin(users, eq(recipes.userId, users.id))
+        .leftJoin(recipeReviews, eq(recipeReviews.recipeId, recipes.id))
+        .leftJoin(recipeNutrition, eq(recipeNutrition.recipeId, recipes.id))
+        .where(and(eq(recipes.userId, user.id), eq(recipes.isPublic, true)))
+        .groupBy(recipes.id, users.username, users.profileImageUrl)
+        .orderBy(desc(recipes.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      const [totalResult] = await nomnomDb
+        .select({ count: count() })
+        .from(recipes)
+        .where(and(eq(recipes.userId, user.id), eq(recipes.isPublic, true)));
+
+      return {
+        items: data.map((r) => ({
+          ...r,
+          rating: r.rating ? parseFloat(r.rating) : 0,
+          calories: r.calories ?? 0,
+        })),
+        total: totalResult.count,
+        totalPages: Math.ceil(totalResult.count / pageSize),
+        hasMore: page < Math.ceil(totalResult.count / pageSize),
+      };
+    }),
+
+  /**
+   * Polls for the first recipe created after a given timestamp.
+   * Used by the AI generation view to detect when Inngest has finished.
+   */
+  getLatestCreatedAfter: authProcedure
+    .input(z.object({ after: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const rows = await nomnomDb
+        .select({ slug: recipes.slug, title: recipes.title })
+        .from(recipes)
+        .where(
+          and(
+            eq(recipes.userId, ctx.userId),
+            gt(recipes.createdAt, new Date(input.after)),
+          ),
+        )
+        .orderBy(desc(recipes.createdAt))
+        .limit(1);
+      return rows[0] ?? null;
     }),
 });
