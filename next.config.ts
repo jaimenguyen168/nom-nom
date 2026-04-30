@@ -6,6 +6,20 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   allowedDevOrigins: ["whole-truly-yak.ngrok-free.app"],
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value:
+              "frame-ancestors 'self' http://localhost:3000 https://jaimenguyen.com https://www.jaimenguyen.com",
+          },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
@@ -20,13 +34,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "plus.unsplash.com", // ✅ Add this missing hostname
+        hostname: "plus.unsplash.com",
         port: "",
         pathname: "/**",
       },
       {
         protocol: "https",
-        hostname: "unsplash.com", // ✅ Add this for regular unsplash URLs
+        hostname: "unsplash.com",
         port: "",
         pathname: "/**",
       },
